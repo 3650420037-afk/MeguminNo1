@@ -11,10 +11,10 @@ from itertools import compress
 import torch
 import torch.nn.functional as F
 import numpy as np
-from torch_geometric.nn.pool import knn_graph
 from torch_geometric.transforms import Compose
-from torch_geometric.utils.subgraph import subgraph
-from torch_geometric.nn import knn, radius
+from torch_geometric.utils import subgraph
+from torch_geometric.nn import radius
+from torch_cluster import knn_graph  # 替代 torch_geometric.nn.pool.knn_graph (兼容 Windows pyg-lib 缺失 knn 算子的问题)
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 # import multiprocessing as multi

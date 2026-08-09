@@ -1,0 +1,15 @@
+
+model:
+    checkpoint: ./ckpt/pretrained_Pocket2Mol.pt
+
+sample:
+  seed: 2020
+  num_samples: 5
+  beam_size: 100
+  max_steps: 30
+  threshold:
+    focal_threshold: 0.5
+    pos_threshold: 0.25
+    element_threshold: 0.3
+    hasatom_threshold: 0.6
+    bond_threshold: 0.4

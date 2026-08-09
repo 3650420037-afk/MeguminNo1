@@ -1,9 +1,31 @@
-.history/*
-__pycache__
+# ========== 大文件:走 GitHub Releases,不进 git 历史 ==========
+# 预训练权重(44.9MB)与微调权重 —— 放 Releases 分发,避免仓库臃肿
+ckpt/*.pt
+
+# 数据集(GB 级,每台机器自行下载)
+data/*
+!data/README.md
+!data/test_list.tsv
+
+# ========== 运行产物:每台机器自己生成 ==========
+# 采样输出(分子结果,合并时用压缩包/Release 传)
 outputs/*
+!outputs/.gitkeep
+
+# 训练/采样日志
 logs/*
-.vscode/*
-sample_for_pocket.py
 tmp/*
-evaluation/.gitignore
+
+# ========== Python 缓存与编译文件 ==========
+__pycache__/
+*.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+.history/*
+
+# ========== 编辑器/系统文件 ==========
+.vscode/*
+.idea/
+.DS_Store
+Thumbs.db
 

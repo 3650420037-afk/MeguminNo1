@@ -4,7 +4,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.loss import _WeightedLoss
 from torch_scatter import scatter_mean, scatter_add
-from torch_geometric.nn import knn, knn_graph
+from torch_cluster import knn, knn_graph
+# from torch_geometric.nn import knn, knn_graph
 # from torch_geometric.nn.pool import knn_graph
 import numpy as np
 

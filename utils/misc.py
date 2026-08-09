@@ -9,6 +9,35 @@ from easydict import EasyDict
 from logging import Logger
 from tqdm.auto import tqdm
 
+# ============================================================
+# PyTorch 2.6+ 兼容性补丁
+# 新版 PyTorch 的 torch.load 默认 weights_only=True,而 2022 年的
+# 旧权重文件中包含 easydict.EasyDict、numpy 等对象,会导致
+# "Weights only load failed" 错误。此处显式放行这些类型。
+# ============================================================
+try:
+    torch.serialization.add_safe_globals([EasyDict])
+    import numpy as _np
+    torch.serialization.add_safe_globals([_np.ndarray, _np.dtype, _np.float32,
+                                          _np.float64, _np.int64, _np.int32,
+                                          _np.bool_])
+except Exception:
+    pass
+
+# ============================================================
+# PyG 2.8 + Windows 兼容性补丁
+# PyG 2.8 的 knn_graph 依赖 pyg-lib 的 knn 算子,但 Windows 版
+# pyg-lib 编译时未包含该算子,导致 WITH_KNN=False 而报错。
+# 此处强制启用 KNN,并让 torch_geometric 的回退实现使用
+# torch_cluster 的 knn_graph(功能完全一致)。
+# ============================================================
+try:
+    import torch_geometric.typing as _tg_typing
+    if not _tg_typing.WITH_KNN:
+        _tg_typing.WITH_KNN = True
+except Exception:
+    pass
+
 
 class BlackHole(object):
     def __setattr__(self, name, value):
