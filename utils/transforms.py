@@ -13,8 +13,8 @@ import torch.nn.functional as F
 import numpy as np
 from torch_geometric.transforms import Compose
 from torch_geometric.utils import subgraph
-from torch_geometric.nn import radius
-from torch_cluster import knn_graph  # 替代 torch_geometric.nn.pool.knn_graph (兼容 Windows pyg-lib 缺失 knn 算子的问题)
+from torch_cluster import radius
+from torch_cluster import knn, knn_graph  # 兼容 Windows pyg-lib 缺失 KNN 算子的问题
 from torch_geometric.utils.num_nodes import maybe_num_nodes
 from torch_scatter import scatter_add
 # import multiprocessing as multi

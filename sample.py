@@ -315,6 +315,9 @@ if __name__ == '__main__':
                     nexts.append(data_next)
 
             queue_tmp += nexts
+        if len(queue_tmp) == 0:
+            logger.warning('No candidates remain; stopping sampling.')
+            break
         # # random choose mols from candidates
         prob = logp_to_rank_prob(np.array([p.average_logp[2:] for p in queue_tmp]),)  # (logp_focal, logpdf_pos), logp_element, logp_hasatom, logp_bond
         n_tmp = len(queue_tmp)

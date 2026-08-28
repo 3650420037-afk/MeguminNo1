@@ -25,6 +25,7 @@ class PositionPredictor(Module):
         feat_focal = self.gvp(h_focal)
         relative_mu = self.mu_net(feat_focal)[1]  # (N_focal, n_component, 3)
         logsigma = self.logsigma_net(feat_focal)[1]  # (N_focal, n_component, 3)
+        logsigma = logsigma.clamp(min=-10.0, max=5.0)
         sigma = torch.exp(logsigma)
         pi = self.pi_net(feat_focal)[0]  # (N_focal, n_component)
         pi = F.softmax(pi, dim=1)

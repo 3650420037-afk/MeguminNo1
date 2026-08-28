@@ -83,10 +83,7 @@ if __name__ == '__main__':
     seed_all(config.sample.seed)
 
     # Logging
-    log_dir = get_new_log_dir(args.outdir, prefix='%s_%s' % (
-        config_name, 
-        os.path.basename(args.pdb_path),
-    ))
+    log_dir = get_new_log_dir(args.outdir, prefix='sample_for_pdb')
     logger = get_logger('sample', log_dir)
     logger.info(args)
     logger.info(config)
@@ -203,6 +200,9 @@ if __name__ == '__main__':
                 queue_tmp += nexts
                 if len(nexts) > 0:
                     queue_weight += [1. / len(nexts)] * len(nexts)
+            if len(queue_tmp) == 0:
+                logger.warning('No candidates remain; stopping sampling.')
+                break
             # # random choose mols from candidates
             prob = logp_to_rank_prob(np.array([p.average_logp[2:] for p in queue_tmp]), queue_weight)  # (logp_focal, logpdf_pos), logp_element, logp_hasatom, logp_bond
             n_tmp = len(queue_tmp)

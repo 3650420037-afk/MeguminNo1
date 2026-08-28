@@ -94,6 +94,15 @@ if __name__ == '__main__':
             protein_atom_feature_dim = protein_featurizer.feature_dim,
             ligand_atom_feature_dim = ligand_featurizer.feature_dim,
         ).to(args.device)
+        init_checkpoint = config.train.get('init_checkpoint', None)
+        if init_checkpoint:
+            logger.info('Loading initialization checkpoint: %s' % init_checkpoint)
+            checkpoint = torch.load(init_checkpoint, map_location=args.device)
+            model.load_state_dict(checkpoint['model'])
+        if config.train.get('freeze_encoder', False):
+            for parameter in model.encoder.parameters():
+                parameter.requires_grad = False
+            logger.info('Frozen encoder parameters for local fine-tuning.')
     print('Num of parameters is', np.sum([p.numel() for p in model.parameters()]))
 
     # Optimizer and scheduler
@@ -138,6 +147,10 @@ if __name__ == '__main__':
             real_compose_knn_edge_index = torch.stack([batch.real_compose_knn_edge_index_0, batch.real_compose_knn_edge_index_1], dim=0),
             fake_compose_knn_edge_index = torch.stack([batch.fake_compose_knn_edge_index_0, batch.fake_compose_knn_edge_index_1], dim=0),
         )
+        loss_components = (loss, loss_frontier, loss_pos, loss_cls, loss_edge, loss_real, loss_fake, loss_surf)
+        if not all(torch.isfinite(value).all() for value in loss_components):
+            logger.warning('[Train] Iter %d skipped non-finite loss batch.' % it)
+            return
         if config.train.use_apex:
             with amp.scale_loss(loss, optimizer) as scaled_loss:
                 scaled_loss.backward()

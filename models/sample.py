@@ -97,7 +97,10 @@ def get_next_step(
         logpdf_pos = np.log(pdf_pos[i].item()+1e-16)
         logp_element = np.log(element_prob[i].item()+1e-16)
         logp_hasatom = np.log(has_atom_prob[i].item()+1e-16)
-        logp_bond = np.mean(np.log(bond_prob[index_bond_i].cpu().detach().numpy()))
+        if index_bond_i.any():
+            logp_bond = np.mean(np.log(bond_prob[index_bond_i].cpu().detach().numpy()))
+        else:
+            logp_bond = 0.0
         is_high_prob = ((logp_focal >= np.log(threshold.focal_threshold)) and
                         (logpdf_pos >= np.log(threshold.pos_threshold)) and
                         (logp_element >= np.log(  threshold.element_threshold)) and
@@ -122,9 +125,19 @@ def get_next_step(
                 data_new.logp_bond = [logp_bond]
             else:
                 data_new.logp_bond.append(logp_bond)
-            data_new.average_logp = np.array([np.mean(logps) for logps in [data_new.logp_focal, data_new.logpdf_pos, data_new.logp_element, data_new.logp_hasatom, data_new.logp_bond]])
         else:
-            data_new.average_logp = np.array([np.mean(logps) for logps in [data_new.logp_focal, data_new.logpdf_pos, data_new.logp_element, data_new.logp_hasatom]])
+            logp_bond = 0.0
+            if ('logp_bond' not in data_new):
+                data_new.logp_bond = [logp_bond]
+            else:
+                data_new.logp_bond.append(logp_bond)
+        data_new.average_logp = np.array([np.mean(logps) for logps in [
+            data_new.logp_focal,
+            data_new.logpdf_pos,
+            data_new.logp_element,
+            data_new.logp_hasatom,
+            data_new.logp_bond,
+        ]])
 
         results.append(data_new)
 
