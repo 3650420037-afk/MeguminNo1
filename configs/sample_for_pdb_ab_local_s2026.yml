@@ -1,0 +1,15 @@
+model:
+    checkpoint: ./logs/a2a_local_v1/train_a2a_local_2026_08_26__21_14_11/checkpoints/100.pt
+
+sample:
+  seed: 2026
+  num_samples: 30
+  beam_size: 50
+  max_steps: 20
+  threshold:
+    focal_threshold: 0.5
+    pos_threshold: 0.25
+    element_threshold: 0.3
+    hasatom_threshold: 0.6
+    bond_threshold: 0.4
+
