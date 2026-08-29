@@ -93,3 +93,38 @@ def logp_to_rank_prob_guided(logp, chem_scores, weight=1.0, lam=1.0):
     if not np.isfinite(total) or total <= 0:
         return np.ones(len(prob)) / len(prob)
     return prob / total
+
+# ---------------- Tanimoto 多样性惩罚 (对 finished 库的 MMR 式压力) ----------------
+from rdkit.Chem import AllChem
+from rdkit import DataStructs
+_REF_FP_CACHE = {"pool": None, "fps": []}
+
+def diversity_penalty(data_list, ref_smiles, div_w=0.5, max_ref=200):
+    """返回每个候选的多样性惩罚 [0, div_w]: 与参照库(最近 max_ref 个成品)的最大 Tanimoto 相似度.
+    参照库为空时返回全 0. 分子解析失败惩罚 0 (不误伤)."""
+    n = len(data_list)
+    if div_w <= 0 or not ref_smiles:
+        return np.zeros(n)
+    ref_fps = _REF_FP_CACHE["fps"]
+    if _REF_FP_CACHE["pool"] is not ref_smiles:
+        ref_fps = []
+        for s in list(ref_smiles)[-max_ref:]:
+            m = Chem.MolFromSmiles(s)
+            if m is not None:
+                ref_fps.append(AllChem.GetMorganFingerprint(m, 2))
+        _REF_FP_CACHE["pool"] = ref_smiles
+        _REF_FP_CACHE["fps"] = ref_fps
+    if not ref_fps:
+        return np.zeros(n)
+    pen = np.zeros(n)
+    for i, d in enumerate(data_list):
+        mol = build_partial_mol(d)
+        if mol is None:
+            continue
+        try:
+            fp = AllChem.GetMorganFingerprint(mol, 2)
+            sims = DataStructs.BulkTanimotoSimilarity(fp, ref_fps)
+            pen[i] = max(sims) if sims else 0.0
+        except Exception:
+            continue
+    return div_w * pen

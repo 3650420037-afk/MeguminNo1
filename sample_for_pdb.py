@@ -9,7 +9,7 @@ from rdkit import Chem
 
 from utils.protein_ligand import PDBProtein
 from sample import *    # Import everything from `sample.py`
-from utils.guidance import chem_score, logp_to_rank_prob_guided
+from utils.guidance import chem_score, logp_to_rank_prob_guided, diversity_penalty
 
 
 def pdb_to_pocket_data(pdb_path, center, bbox_size):
@@ -207,8 +207,11 @@ if __name__ == '__main__':
             # # random choose mols from candidates
             guided_cfg = config.sample.get('guided', None)
             if guided_cfg is not None and guided_cfg.get('enabled', False):
-                # 方向1: 引导束搜索 -- QED/SA 化学分数参与束排序 (lam=0 时退化为原始排序)
+                # 方向1: 引导束搜索 -- QED/SA 化学分数 + (可选)Tanimoto 多样性惩罚
                 chem = [chem_score(p, guided_cfg.get('qed_w', 1.0), guided_cfg.get('sa_w', 1.0)) for p in queue_tmp]
+                div_pen = diversity_penalty(queue_tmp, pool.smiles,
+                                            guided_cfg.get('diversity_w', 0.0))
+                chem = [c - d for c, d in zip(chem, div_pen)]
                 prob = logp_to_rank_prob_guided(np.array([p.average_logp[2:] for p in queue_tmp]), chem,
                                                 queue_weight, guided_cfg.get('lam', 1.0))
             else:

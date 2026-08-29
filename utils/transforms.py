@@ -285,7 +285,8 @@ class LigandBFSMask(object):
     @staticmethod
     def get_bfs_perm(nbh_list):
         num_nodes = len(nbh_list)
-        num_neighbors = torch.LongTensor([len(nbh_list[i]) for i in range(num_nodes)])
+        # 兼容性加固: 孤立原子不在 nbh_list 键中, 用 .get 防止 KeyError (正常数据不受影响)
+        num_neighbors = torch.LongTensor([len(nbh_list.get(i, [])) for i in range(num_nodes)])
 
         bfs_queue = [random.randint(0, num_nodes-1)]
         bfs_perm = []

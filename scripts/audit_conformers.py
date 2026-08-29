@@ -21,6 +21,13 @@ def audit_sdf(path):
     except Exception:
         return issues + ["no_conformer"]
     n = pos.shape[0]
+    # 拓扑孤键: 无任何键连接的原子 (会导致训练 LigandBFSMask KeyError)
+    bonded = set()
+    for b in mol.GetBonds():
+        bonded.add(b.GetBeginAtomIdx()); bonded.add(b.GetEndAtomIdx())
+    orphans = [i for i in range(n) if i not in bonded]
+    if orphans:
+        issues.append("orphan_atoms=%s" % orphans[:5])
     # 键长
     for b in mol.GetBonds():
         i, j = b.GetBeginAtomIdx(), b.GetEndAtomIdx()
