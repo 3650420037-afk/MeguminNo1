@@ -2,7 +2,7 @@ model:
     checkpoint: ./ckpt/pretrained_Pocket2Mol.pt
 
 sample:
-  seed: 8202
+  seed: 8229
   num_samples: 50
   beam_size: 100
   max_steps: 50
