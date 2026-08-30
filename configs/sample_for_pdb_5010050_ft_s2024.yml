@@ -1,0 +1,15 @@
+model:
+    checkpoint: D:/MMModel/Pocket2Mol/logs/train_multitarget_v2_2026_08_30__10_12_44/checkpoints/2000.pt
+
+sample:
+  seed: 2024
+  num_samples: 50
+  beam_size: 100
+  max_steps: 50
+  threshold:
+    focal_threshold: 0.5
+    pos_threshold: 0.25
+    element_threshold: 0.3
+    hasatom_threshold: 0.6
+    bond_threshold: 0.4
+
