@@ -305,4 +305,5 @@ if __name__ == "__main__":
         default = font.nametofont("TkDefaultFont"); default.configure(family="Microsoft YaHei", size=10)
     except Exception:
         pass
-    App(root).mainloop()
+    app = App(root)
+    root.mainloop()
