@@ -9,16 +9,30 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 APP_TITLE = "GPCR 小分子药物生成器"
-HERE = os.path.dirname(os.path.abspath(__file__))
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_EXE_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else _HERE
 REPO = r"D:\MMModel\Pocket2Mol"
 PY = r"D:\Miniconda3\envs\Pocket2Mol\python.exe"
+PDB_DIR = r"D:\MMModel\靶点结构"
 OUTROOT = os.path.join(REPO, "outputs")
-CFG = os.path.join(HERE, "gui_config.json")
+CFG = os.path.join(_HERE, "gui_config.json")
+
+# 部署模式: exe 同目录存在 repo\ 子文件夹时, 自动改用包内仓库与环境 (分发免配置)
+if os.path.isdir(os.path.join(_EXE_DIR, "repo")):
+    REPO = os.path.join(_EXE_DIR, "repo")
+    PDB_DIR = os.path.join(REPO, "structures")
+    OUTROOT = os.path.join(REPO, "outputs")
+    for _cand in (os.path.join(_EXE_DIR, "env", "python.exe"),
+                  os.path.join(_EXE_DIR, "env", "Scripts", "python.exe")):
+        if os.path.exists(_cand):
+            PY = _cand
+            break
 
 # 允许 exe 旁的 config.json 覆盖路径 (分发到其他机器时改这里)
 try:
-    _c = json.load(open(os.path.join(os.path.dirname(sys.executable if getattr(sys, "frozen", False) else HERE), "gui_config.json"), encoding="utf-8"))
+    _c = json.load(open(os.path.join(_EXE_DIR, "gui_config.json"), encoding="utf-8"))
     REPO = _c.get("repo", REPO); PY = _c.get("python", PY); OUTROOT = _c.get("outroot", OUTROOT)
+    PDB_DIR = _c.get("pdb_dir", PDB_DIR)
 except Exception:
     pass
 
@@ -127,7 +141,7 @@ class App:
     def start(self):
         if self.proc: return
         tgt = next(t for t in TARGETS if t[0] == self.tgt.get())
-        pdb = glob.glob(os.path.join(r"D:\MMModel\靶点结构", tgt[1] + "*.pdb"))
+        pdb = glob.glob(os.path.join(PDB_DIR, tgt[1] + "*.pdb"))
         if not pdb:
             messagebox.showerror("错误", "找不到靶点蛋白文件: " + tgt[1]); return
         try:
@@ -155,7 +169,8 @@ class App:
         cmd = [PY, "sample_for_pdb.py", "--pdb_path", pdb[0], "--center", tgt[2],
                "--config", cfgp.replace("\\", "/"), "--outdir", self.session_dir.replace("\\", "/")]
         try:
-            self.proc = subprocess.Popen(cmd, cwd=REPO, stdout=lf, stderr=subprocess.STDOUT)
+            self.proc = subprocess.Popen(cmd, cwd=REPO, stdout=lf, stderr=subprocess.STDOUT,
+                                         creationflags=subprocess.CREATE_NO_WINDOW)
         except Exception as e:
             messagebox.showerror("启动失败", str(e)); return
         self.btn_start.configure(state="disabled"); self.btn_stop.configure(state="normal")
@@ -202,7 +217,8 @@ class App:
         lib = os.path.join(self.session_dir, "library")
         r = subprocess.run([PY, os.path.join(REPO, "scripts", "build_library.py"),
                             "--runs", self.session_dir, "--library", lib],
-                           cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600)
+                           cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
         csvp = os.path.join(lib, "compounds.csv")
         if r.returncode != 0 or not os.path.exists(csvp):
             self.root.after(0, lambda: (self.status.set("过滤完成但入库异常，显示原始分子。"),
@@ -250,7 +266,8 @@ class App:
                     "rdMolDraw2D.PrepareAndDrawMolecule(d,m); d.FinishDrawing();"
                     "open(sys.argv[2],'wb').write(d.GetDrawingText())")
             subprocess.run([PY, "-c", code, smi, png], cwd=REPO, timeout=60,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
             if os.path.exists(png):
                 self.png_path = png
                 self.root.after(0, self._show_png)
@@ -277,7 +294,8 @@ class App:
                 "w=Chem.SDWriter(sys.argv[2]); w.write(m); w.close()")
         try:
             subprocess.run([PY, "-c", code, smi, dst], cwd=REPO, timeout=60,
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,
+                           creationflags=subprocess.CREATE_NO_WINDOW)
             messagebox.showinfo("完成", "已导出 3D 结构:\n" + dst)
         except Exception as e:
             messagebox.showerror("导出失败", str(e))
