@@ -1,0 +1,27 @@
+{
+  "assayability": {
+    "enabled": true,
+    "logS_green": -4.5,
+    "logS_yellow": -6.0,
+    "yellow_coef": 0.9,
+    "red_coef": 0.7
+  },
+  "extrapolation": {
+    "enabled": true,
+    "knn_k": 5,
+    "p75_split": true
+  },
+  "selectivity": {
+    "enabled": true,
+    "topN": 200,
+    "norm": "percentile"
+  },
+  "four_dim": {
+    "weights": [
+      0.35,
+      0.15,
+      0.25,
+      0.25
+    ]
+  }
+}
