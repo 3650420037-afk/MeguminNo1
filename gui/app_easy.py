@@ -291,7 +291,9 @@ class App:
                 "from rdkit.Chem import AllChem; m=Chem.MolFromSmiles(sys.argv[1]);"
                 "m=Chem.AddHs(m); AllChem.EmbedMolecule(m, randomSeed=42);"
                 "AllChem.MMFFOptimizeMolecule(m); m=Chem.RemoveHs(m);"
-                "w=Chem.SDWriter(sys.argv[2]); w.write(m); w.close()")
+                # 用 Python open() + MolToMolBlock 写文件: RDKit 的 C++ 文件 API
+                # 在 Windows 上打不开含中文的路径 (用户导出的目标目录可能含中文)
+                "open(sys.argv[2], 'w', encoding='utf-8').write(Chem.MolToMolBlock(m))")
         try:
             subprocess.run([PY, "-c", code, smi, dst], cwd=REPO, timeout=60,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True,

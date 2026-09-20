@@ -49,7 +49,10 @@ class BlackHole(object):
 
 
 def load_config(path):
-    with open(path, 'r') as f:
+    # utf-8-sig: 同时兼容带 BOM 与不带 BOM 的 YAML (PowerShell/记事本写出的配置可能带
+    # BOM, 旧写法会把 BOM 并进首个键名, 使 config.model 变成 config['\ufeffmodel'],
+    # 进而报 AttributeError: 'EasyDict' object has no attribute 'model')
+    with open(path, 'r', encoding='utf-8-sig') as f:
         return EasyDict(yaml.safe_load(f))
 
 

@@ -250,11 +250,28 @@ def parse_sdf_file(path):
         4: BOND_TYPES[BondType.AROMATIC],
     }
     row, col, edge_type = [], [], []
+    _arom_hits = 0
     for bond_line in sdf[4+num_atoms:4+num_atoms+num_bonds]:
         start, end = int(bond_line[0:3])-1, int(bond_line[3:6])-1
+        _raw_bt = int(bond_line[6:9])
+        if _raw_bt == 4:
+            _arom_hits += 1
         row += [start, end]
         col += [end, start]
-        edge_type += 2 * [bond_type_map[int(bond_line[6:9])]]
+        edge_type += 2 * [bond_type_map[_raw_bt]]
+
+    # 契约校验(条件性缺陷防御): SDF 芳香标志(4)会被映射为 AROMATIC(数值12), 而下游
+    # tri_edge 特征模板只认 [-1,0,1,2,3] (该边特征将退化为全零行)、LigandCountNeighbors
+    # 的 valence 按键级加和会把 12 当成 12 价累加 -> 静默特征污染。此处显式告警而不改动
+    # 映射本身(保持原版行为与预训练权重兼容); 修复请用 scripts/kekulize_dataset.py 对数据
+    # 做 kekulize 规范化, 或用 scripts/audit_bondtypes.py 核查数据洁净性。
+    if _arom_hits > 0:
+        import warnings
+        warnings.warn(
+            "parse_sdf_file: %s 含 %d 条芳香键标志(4); 训练前建议用 "
+            "scripts/kekulize_dataset.py 规范化, 以免 valence/tri_edge 特征污染."
+            % (os.path.basename(path), _arom_hits)
+        )
 
     edge_index = np.array([row, col], dtype=int)
     edge_type = np.array(edge_type, dtype=int)

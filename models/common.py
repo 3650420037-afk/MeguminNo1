@@ -217,6 +217,12 @@ class GaussianSmearingVN(nn.Module):
 
 
 class ShiftedSoftplus(nn.Module):
+    """NOTE: 类名为历史遗留。
+
+    实际 forward 返回 LeakyReLU (softplus 实现见下方注释代码), 继承自原版
+    Pocket2Mol; 本项目为保持与预训练权重/原版行为一致而未改名、未改动实现。
+    """
+
     def __init__(self):
         super().__init__()
         # self.shift = torch.log(torch.tensor(2.0)).item()

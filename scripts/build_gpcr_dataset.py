@@ -117,15 +117,37 @@ def main():
         "test": [(item[0], item[1]) for item in val_entries],
     }
     torch.save(split, os.path.join(output, "split_by_name.pt"))
+    # 构筑后自检: 统计 SDF 文本键值分布 (与 utils/protein_ligand.parse_sdf_file 同口径)。
+    # 芳香标志(4) 会被 parse 成 AROMATIC(12), 下游 tri_edge 模板 [-1,0,1,2,3] 失配 +
+    # valence 加和被污染 -> 此处构建即告警, 避免把洁净性问题带进训练阶段。
+    from collections import Counter
+    bond_stats = Counter()
+    for _pocket, _lig, _x, _y in entries:
+        try:
+            lines = open(os.path.join(output, _lig), encoding="utf-8", errors="ignore").read().splitlines()
+            na, nb = int(lines[3][0:3]), int(lines[3][3:6])
+            for bl in lines[4 + na:4 + na + nb]:
+                bond_stats[int(bl[6:9])] += 1
+        except Exception:
+            continue
+    arom = bond_stats.get(4, 0)
     with open(os.path.join(output, "build_report.txt"), "w", encoding="utf-8") as handle:
         handle.write("source_csv=%s\nsource_pdb=%s\n" % (args.csv, args.pdb))
         handle.write("total_smiles=%d\nvalid_pairs=%d\nskipped=%d\n" % (len(smiles_values), len(entries), len(skipped)))
         handle.write("train=%d\nval=%d\n" % (len(train_entries), len(val_entries)))
+        handle.write("bond_types single=%d double=%d triple=%d aromatic=%d\n" % (
+            bond_stats.get(1, 0), bond_stats.get(2, 0), bond_stats.get(3, 0), arom))
+        handle.write("bond_hygiene=%s\n" % ("clean" if arom == 0 else "AROMATIC_PRESENT_NEEDS_KEKULIZE"))
         for index, reason in skipped:
             handle.write("skipped_%d=%s\n" % (index, reason))
     print("valid_pairs=%d train=%d val=%d skipped=%d output=%s" % (
         len(entries), len(train_entries), len(val_entries), len(skipped), output
     ))
+    print("bond_types single=%d double=%d triple=%d aromatic=%d (%s)" % (
+        bond_stats.get(1, 0), bond_stats.get(2, 0), bond_stats.get(3, 0), arom,
+        "clean" if arom == 0 else "NEEDS_KEKULIZE -> scripts/kekulize_dataset.py"))
+    if arom > 0:
+        print("WARNING: 检出芳香键标志 %d 条, 训练前请运行 scripts/kekulize_dataset.py --apply" % arom)
 
 
 if __name__ == "__main__":
