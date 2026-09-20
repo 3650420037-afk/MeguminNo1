@@ -61,6 +61,8 @@ def get_init(data, model, transform, threshold):
     pos_generated, pdf_pos, abs_pos_mu, pos_sigma, pos_pi,
     element_pred, element_prob, has_atom_prob) = [p.cpu() for p in predicitions]
 
+    retry = 0
+    max_retry = 10
     while True:
         data_next_list = get_next_step(
             data,
@@ -80,6 +82,16 @@ def get_init(data, model, transform, threshold):
         )
         data_next_list = [data for data in data_next_list if data.is_high_prob]
         if len(data_next_list) == 0:
+            # 防护: 非有限概率(如 NaN)会让下方所有阈值比较为 False 而进入无 break 的
+            # else 分支 -> 死循环。此处显式检测并设重试上限, 超限返回空列表,
+            # 由调用方主循环的空队列保护优雅结束 (行为与原版正常路径完全一致)。
+            nonfinite = any(
+                (not torch.isfinite(t).all()) for t in (pdf_pos, p_focal, element_prob)
+            )
+            if nonfinite or retry >= max_retry:
+                print('Initialization failed (non-finite=%s, retry=%d). Aborting.' % (nonfinite, retry))
+                return []
+            retry += 1
             if torch.all(pdf_pos < threshold.pos_threshold):
                 threshold.pos_threshold = threshold.pos_threshold / 2
                 print('Positional probability threshold is too high. Change to %f' % threshold.pos_threshold)
@@ -90,7 +102,7 @@ def get_init(data, model, transform, threshold):
                 threshold.element_threshold = threshold.element_threshold / 2
                 print('Element probability threshold is too high. Change to %f' % threshold.element_threshold)
             else:
-                print('Initialization failed.')
+                print('Initialization failed. Retry %d/%d.' % (retry, max_retry))
         else:
             break
 

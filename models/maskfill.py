@@ -451,26 +451,35 @@ class MaskFillModelVN(Module):
         
     def get_tri_edges(self, edge_index_query, pos_query, idx_ligand, ligand_bond_index, ligand_bond_type):
         row, col = edge_index_query
-        acc_num_edges = 0
-        index_real_cps_edge_i_list, index_real_cps_edge_j_list = [], []  # index of real-ctx edge (for attention)
-        for node in torch.arange(pos_query.size(0)):
-            num_edges = (row == node).sum()
-            index_edge_i = torch.arange(num_edges, dtype=torch.long, ).to('cuda') + acc_num_edges
-            index_edge_i, index_edge_j = torch.meshgrid(index_edge_i, index_edge_i, indexing=None)
-            index_edge_i, index_edge_j = index_edge_i.flatten(), index_edge_j.flatten()
-            index_real_cps_edge_i_list.append(index_edge_i)
-            index_real_cps_edge_j_list.append(index_edge_j)
-            acc_num_edges += num_edges
-        index_real_cps_edge_i = torch.cat(index_real_cps_edge_i_list, dim=0)  # add len(real_compose_edge_index) in the dataloader for batch
-        index_real_cps_edge_j = torch.cat(index_real_cps_edge_j_list, dim=0)
+        n_query = pos_query.size(0)
+        n_context = len(idx_ligand)
+        device = row.device
+        # --- 向量化路径: 调用点为 query x context 全连接 (每个 query 的边数恒为 n_context) ---
+        # 原实现逐 query 循环 + meshgrid, 复杂度 O(n_query * n_context^2); 此处用
+        # repeat_interleave/repeat 一次性构造同一索引对集合, 与原输出逐位一致 (见
+        # scripts/test_tri_edges_equiv.py 一致性测试)。不满足规则分组时回退原循环。
+        use_fast = False
+        if n_context > 0 and row.size(0) == n_query * n_context:
+            expect = torch.arange(n_query, device=device).repeat_interleave(n_context)
+            use_fast = bool(torch.equal(row, expect))
+        if use_fast:
+            offs = torch.arange(n_context, device=device)
+            ii = offs.repeat_interleave(n_context)
+            jj = offs.repeat(n_context)
+            base = (torch.arange(n_query, device=device) * n_context).repeat_interleave(n_context * n_context)
+            index_real_cps_edge_i = base + ii.repeat(n_query)
+            index_real_cps_edge_j = base + jj.repeat(n_query)
+        else:
+            index_real_cps_edge_i, index_real_cps_edge_j = self._get_tri_edges_loop(row, n_query, device)
 
         node_a_cps_tri_edge = col[index_real_cps_edge_i]  # the node of tirangle edge for the edge attention (in the compose)
         node_b_cps_tri_edge = col[index_real_cps_edge_j]
-        n_context = len(idx_ligand)
-        adj_mat = (torch.zeros([n_context, n_context], dtype=torch.long) - torch.eye(n_context, dtype=torch.long)).to('cuda')
-        adj_mat[ligand_bond_index[0], ligand_bond_index[1]] = ligand_bond_type
+        adj_mat = (torch.zeros([n_context, n_context], dtype=torch.long, device=device)
+                   - torch.eye(n_context, dtype=torch.long, device=device))
+        if ligand_bond_index.numel() > 0:
+            adj_mat[ligand_bond_index[0], ligand_bond_index[1]] = ligand_bond_type
         tri_edge_type = adj_mat[node_a_cps_tri_edge, node_b_cps_tri_edge]
-        tri_edge_feat = (tri_edge_type.view([-1, 1]) == torch.tensor([[-1, 0, 1, 2, 3]]).to('cuda')).long()
+        tri_edge_feat = (tri_edge_type.view([-1, 1]) == torch.tensor([[-1, 0, 1, 2, 3]], device=device)).long()
 
         index_real_cps_edge_for_atten = torch.stack([
             index_real_cps_edge_i, index_real_cps_edge_j  # plus len(real_compose_edge_index_0) for dataloader batch
@@ -479,3 +488,17 @@ class MaskFillModelVN(Module):
             node_a_cps_tri_edge, node_b_cps_tri_edge  # plus len(compose_pos) for dataloader batch
         ], dim=0)
         return index_real_cps_edge_for_atten, tri_edge_index, tri_edge_feat
+
+    @staticmethod
+    def _get_tri_edges_loop(row, n_query, device):
+        """回退实现: 与原版逐 query 循环语义一致 (非常规边分组时使用)."""
+        acc_num_edges = 0
+        index_real_cps_edge_i_list, index_real_cps_edge_j_list = [], []
+        for node in range(n_query):
+            num_edges = (row == node).sum()
+            index_edge_i = torch.arange(num_edges, dtype=torch.long, device=device) + acc_num_edges
+            index_edge_i, index_edge_j = torch.meshgrid(index_edge_i, index_edge_i, indexing='ij')
+            index_real_cps_edge_i_list.append(index_edge_i.flatten())
+            index_real_cps_edge_j_list.append(index_edge_j.flatten())
+            acc_num_edges += num_edges
+        return torch.cat(index_real_cps_edge_i_list, dim=0), torch.cat(index_real_cps_edge_j_list, dim=0)
