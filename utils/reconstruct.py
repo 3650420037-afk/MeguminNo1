@@ -87,16 +87,22 @@ def modify_submol(mol):  # modify mols containing C=N(C)O
     return mol
 
 
-def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4):
+def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4, max_pose_rmsd=2.0):
     """修正模型生成构象的局部几何畸变, 同时保留其在口袋中的姿态。
 
     背景: 模型逐原子生成只保证键长级局部几何, 部分分子的键角畸变会导致
     RDKit AddHs 位置计算退化(出现 H-H 重合, MMFF 能量爆炸到 1e9), 此时
     直接对模型坐标做力场优化无法恢复。本函数改为:
       1) 用 ETKDG 重新生成内部几何合理的构象(带 H, 多构象取最优)
-      2) 刚体叠合(AlignMol)到模型坐标 -> 保留模型预测的口袋姿态
+      2) keep_pose=True: 刚体叠合(AlignMol)到模型坐标 -> 保留模型预测的口袋姿态
+         keep_pose=False: 跳过叠合, 直接取力场能量最低的构象
       3) MMFF94s 优化(从合理起点, 稳定收敛)
-    返回 (优化后的分子, 弛豫能 kcal/mol 或 None); 任何失败均回退原分子不抛异常。
+    返回 (分子, info)；info 为 dict:
+       pose_rmsd        ETKDG 构象叠合到模型姿态后的重原子 RMSD (Å); keep_pose=False 时为 None
+       relax_energy     e0 - e1, 力场优化释放的能量 (kcal/mol)
+       strain_per_heavy e1 / 重原子数, 标准化的残余应变指标 (kcal/mol/atom)
+    安全策略: keep_pose=True 且叠合 RMSD > max_pose_rmsd 时放弃精修(姿态保真优先);
+    任何失败均回退原分子不抛异常。
     """
     try:
         from rdkit.Chem import AllChem
@@ -106,6 +112,7 @@ def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4):
             return mol, None
         ref_pos = base.GetConformer().GetPositions().copy()
         heavy_idx = [a.GetIdx() for a in base.GetAtoms() if a.GetAtomicNum() != 1]
+        n_heavy = max(1, len(heavy_idx))
 
         # 1) ETKDG 生成合理内部几何 (在加 H 的副本上)
         mh = Chem.AddHs(base, addCoords=False)
@@ -116,19 +123,26 @@ def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4):
         if len(ok) == 0:
             return mol, None
 
-        # 2) 叠合到模型姿态: 选叠合后重原子 RMSD 最小的构象
+        # 2) 选构象: keep_pose 时叠合到模型姿态取 RMSD 最小 (并做阈值把关)
         best, best_rms = None, None
-        for cid in ok:
-            probe = Chem.Mol(mh)
-            amap = [(i, i) for i in heavy_idx]
-            try:
-                rms = rdMolAlign.AlignMol(probe, base, prbCid=cid, atomMap=amap)
-            except Exception:
-                continue
-            if best_rms is None or rms < best_rms:
-                best, best_rms = probe, rms
-        if best is None:
-            return mol, None
+        if keep_pose:
+            for cid in ok:
+                probe = Chem.Mol(mh)
+                amap = [(i, i) for i in heavy_idx]
+                try:
+                    rms = rdMolAlign.AlignMol(probe, base, prbCid=cid, atomMap=amap)
+                except Exception:
+                    continue
+                if best_rms is None or rms < best_rms:
+                    best, best_rms = probe, rms
+            if best is None:
+                return mol, None
+            # 姿态保真把关: 叠合后仍明显偏离模型姿态 -> 放弃精修, 保留原始模型构象
+            if best_rms > max_pose_rmsd:
+                return mol, None
+        else:
+            best = Chem.Mol(mh)   # 不保姿态: 直接对任一合理构象做力场优化
+            best_rms = None
 
         # 3) MMFF94s 优化 (从合理起点)
         props = AllChem.MMFFGetMoleculeProperties(best, mmffVariant="MMFF94s")
@@ -147,10 +161,15 @@ def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4):
         e1 = ff.CalcEnergy()
         # 保留氢直接交付: 无氢 SDF 被下游 AddHs 时会重新推算氢位置, 在模型姿态上可能退化出 H 重合
         m_opt = best
-        strain = float(e0 - e1)
-        if not np.isfinite(strain):
+        relax_energy = float(e0 - e1)
+        if not np.isfinite(relax_energy):
             return mol, None
-        return m_opt, (float(best_rms) if best_rms is not None else None, strain)
+        info = {
+            "pose_rmsd": (float(best_rms) if best_rms is not None else None),
+            "relax_energy": relax_energy,
+            "strain_per_heavy": float(e1) / n_heavy,
+        }
+        return m_opt, info
     except Exception:
         return mol, None
 
