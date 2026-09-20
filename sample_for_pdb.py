@@ -178,6 +178,11 @@ if __name__ == '__main__':
                     if data_next.status == STATUS_FINISHED:
                         try:
                             rdmol = reconstruct_from_generated_with_edges(data_next)
+                            # 可选: 保留模型姿态 + ETKDG 重建内部几何 + 力场优化 (config.sample.relax_output, 默认关)
+                            if config.sample.get('relax_output', False):
+                                rdmol, info = relax_mol_geometry(rdmol)
+                                if info is not None:
+                                    data_next.pose_rmsd, data_next.strain_energy = info
                             data_next.rdmol = rdmol
                             mol = Chem.MolFromSmiles(Chem.MolToSmiles(rdmol))
                             smiles = Chem.MolToSmiles(mol)

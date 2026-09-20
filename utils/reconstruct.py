@@ -86,3 +86,71 @@ def modify_submol(mol):  # modify mols containing C=N(C)O
         mol.GetAtomWithIdx(idx_atom_O).SetFormalCharge(-1)  # set O to O-
     return mol
 
+
+def relax_mol_geometry(mol, max_iters=500, keep_pose=True, n_confs=4):
+    """修正模型生成构象的局部几何畸变, 同时保留其在口袋中的姿态。
+
+    背景: 模型逐原子生成只保证键长级局部几何, 部分分子的键角畸变会导致
+    RDKit AddHs 位置计算退化(出现 H-H 重合, MMFF 能量爆炸到 1e9), 此时
+    直接对模型坐标做力场优化无法恢复。本函数改为:
+      1) 用 ETKDG 重新生成内部几何合理的构象(带 H, 多构象取最优)
+      2) 刚体叠合(AlignMol)到模型坐标 -> 保留模型预测的口袋姿态
+      3) MMFF94s 优化(从合理起点, 稳定收敛)
+    返回 (优化后的分子, 弛豫能 kcal/mol 或 None); 任何失败均回退原分子不抛异常。
+    """
+    try:
+        from rdkit.Chem import AllChem
+        from rdkit.Chem import rdMolAlign
+        base = Chem.Mol(mol)
+        if base.GetNumConformers() == 0:
+            return mol, None
+        ref_pos = base.GetConformer().GetPositions().copy()
+        heavy_idx = [a.GetIdx() for a in base.GetAtoms() if a.GetAtomicNum() != 1]
+
+        # 1) ETKDG 生成合理内部几何 (在加 H 的副本上)
+        mh = Chem.AddHs(base, addCoords=False)
+        ok = AllChem.EmbedMultipleConfs(mh, numConfs=n_confs, randomSeed=42,
+                                        useRandomCoords=False, maxAttempts=50)
+        if len(ok) == 0:
+            ok = AllChem.EmbedMultipleConfs(mh, numConfs=n_confs, randomSeed=42, useRandomCoords=True)
+        if len(ok) == 0:
+            return mol, None
+
+        # 2) 叠合到模型姿态: 选叠合后重原子 RMSD 最小的构象
+        best, best_rms = None, None
+        for cid in ok:
+            probe = Chem.Mol(mh)
+            amap = [(i, i) for i in heavy_idx]
+            try:
+                rms = rdMolAlign.AlignMol(probe, base, prbCid=cid, atomMap=amap)
+            except Exception:
+                continue
+            if best_rms is None or rms < best_rms:
+                best, best_rms = probe, rms
+        if best is None:
+            return mol, None
+
+        # 3) MMFF94s 优化 (从合理起点)
+        props = AllChem.MMFFGetMoleculeProperties(best, mmffVariant="MMFF94s")
+        ff = AllChem.MMFFGetMoleculeForceField(best, props) if props is not None else None
+        if ff is None:
+            try:
+                ff = AllChem.UFFGetMoleculeForceField(best)
+            except Exception:
+                return mol, None
+        if ff is None:
+            return mol, None
+        e0 = ff.CalcEnergy()
+        if not np.isfinite(e0) or e0 > 1e6:      # 起点仍异常 -> 放弃
+            return mol, None
+        ff.Minimize(maxIts=max_iters)
+        e1 = ff.CalcEnergy()
+        # 保留氢直接交付: 无氢 SDF 被下游 AddHs 时会重新推算氢位置, 在模型姿态上可能退化出 H 重合
+        m_opt = best
+        strain = float(e0 - e1)
+        if not np.isfinite(strain):
+            return mol, None
+        return m_opt, (float(best_rms) if best_rms is not None else None, strain)
+    except Exception:
+        return mol, None
+

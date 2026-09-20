@@ -3,9 +3,9 @@ model:
 
 sample:
   seed: 2024
-  num_samples: 50
-  beam_size: 100
-  max_steps: 50
+  num_samples: 20
+  beam_size: 50
+  max_steps: 20
   threshold:
     focal_threshold: 0.5
     pos_threshold: 0.25
@@ -17,4 +17,5 @@ sample:
     qed_w: 1.0
     sa_w: 1.0
     lam: 3
+    diversity_w: 0.8
   relax_output: true
