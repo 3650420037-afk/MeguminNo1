@@ -35,6 +35,7 @@ def sdf_bond_types(path):
 
 def main(datasets):
     total = Counter()
+    n_skipped = 0        # 解析失败计数: 不能静默跳过, 否则"洁净"结论的分母会失真
     print("=== SDF 文本原始键值分布（parse_sdf_file 口径）===")
     for ds in datasets:
         d = os.path.join(BASE, ds)
@@ -46,6 +47,8 @@ def main(datasets):
         for pocket, lig, _, _ in idx:
             r = sdf_bond_types(os.path.join(d, lig))
             if r is None:
+                n_skipped += 1          # 显式计数, 避免"洁净"结论分母漏项
+                print("    WARN 解析失败, 已跳过: %s" % lig)
                 continue
             n += 1
             c.update(r)
@@ -54,10 +57,15 @@ def main(datasets):
             ds, n, c.get(1, 0), c.get(2, 0), c.get(3, 0), c.get(4, 0)))
     s = sum(total.values())
     print()
+    if s == 0:
+        print("汇总: 无有效键数据 (全部解析失败或数据集为空), 无法判定洁净性")
+        return
     print("汇总 %d 键: 单 %d (%.1f%%) | 双 %d (%.1f%%) | 三 %d (%.1f%%) | 芳香(4) %d" % (
         s, total.get(1, 0), 100.0 * total.get(1, 0) / s,
         total.get(2, 0), 100.0 * total.get(2, 0) / s,
         total.get(3, 0), 100.0 * total.get(3, 0) / s, total.get(4, 0)))
+    if n_skipped:
+        print("注意: 有 %d 个 SDF 解析失败被跳过, 洁净性结论未覆盖这些文件" % n_skipped)
     print("结论:", "数据洁净（无芳香标志，训练特征无污染）" if total.get(4, 0) == 0
           else "存在芳香键 %d 条 -> 需 kekulize 规范化后再训练" % total.get(4, 0))
 

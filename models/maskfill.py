@@ -174,6 +174,12 @@ class MaskFillModelVN(Module):
                 pos_target=pos_generated
             )
             idx_parent = torch.repeat_interleave(torch.arange(n_focals), repeats=n_candidate_samples, dim=0).to(compose_pos.device)
+        else:
+            # 原版遗留: n_samples>=0 (MDN 随机采样) 分支未实现, 旧代码会带着未定义变量
+            # 落到下面的 return 抛 UnboundLocalError。此处显式报错以免误导;
+            # 如需随机采样, 可接入 PositionPredictor.sample_batch (position.py 已备)。
+            raise NotImplementedError(
+                'sample_position(n_samples>=0) 未实现; 当前调用方均使用 n_samples=-1 (确定性取 mu)')
 
         return (pos_generated, pdf_pos, idx_parent, abs_pos_mu, pos_sigma, pos_pi)  # position
 
@@ -380,7 +386,9 @@ class MaskFillModelVN(Module):
     def query_batch(self, pos_query_list, batch, limit=10000):
         pos_query, batch_query = concat_tensors_to_batch(pos_query_list)
         num_query = pos_query.size(0)
-        assert len(torch.unique(batch_query)) == 1, NotImplementedError('Modify get_batch_edge to support multiple batches')
+        if len(torch.unique(batch_query)) != 1:
+            # 不用 assert: -O 运行时会被剥离, 保护会静默失效
+            raise NotImplementedError('Modify get_batch_edge to support multiple batches')
         y_cls_all, y_ind_all = [], []
         for pos_query_partial, batch_query_partial in zip(split_tensor_to_segments(pos_query, limit), split_tensor_to_segments(batch_query, limit)):
             PM = batch_intersection_mask(batch.protein_element_batch, batch_query_partial)

@@ -50,7 +50,7 @@ def reconstruct_from_generated_with_edges(data, raise_error=True, sanitize=True)
     # modify
     try:
         rd_mol = modify_submol(rd_mol)
-    except:
+    except Exception:          # 不用裸 except: 需让 KeyboardInterrupt/SystemExit 穿透
         if raise_error:
             raise MolReconsError()
         else:
@@ -69,7 +69,7 @@ def reconstruct_from_generated_with_edges(data, raise_error=True, sanitize=True)
     if sanitize:
         try:
             Chem.SanitizeMol(rd_mol, Chem.SANITIZE_ALL^Chem.SANITIZE_KEKULIZE^Chem.SANITIZE_SETAROMATICITY)
-        except:
+        except Exception:
             Chem.SanitizeMol(rd_mol)
            
     return rd_mol

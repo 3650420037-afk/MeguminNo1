@@ -34,6 +34,17 @@ def verify(name):
         if not os.path.isfile(os.path.join(path, ligand_name)):
             missing += 1
     print("missing_files=%d" % missing)
+    # index <-> split 一致性校验 (旧版只查文件存在性, 会漏掉 split/index 不匹配、
+    # 重复或遗漏条目 —— 实测曾出现 build_report 与 index 数字矛盾却"通过校验")
+    idx_set = {(e[0], e[1]) for e in entries}
+    sp_set = set(train + test)
+    dup = len(train) + len(test) - len(sp_set)
+    not_in_index = len(sp_set - idx_set)
+    not_in_split = len(idx_set - sp_set)
+    print("split_dupes=%d split_not_in_index=%d index_not_in_split=%d" % (dup, not_in_index, not_in_split))
+    if dup or not_in_index or not_in_split:
+        print("  WARN: index 与 split 不一致 (split 由 rebuild_split 重切后可能未同步, 检查 scripts 流程)")
+    print("consistency=%s" % ("OK" if not (dup or not_in_index or not_in_split) else "MISMATCH"))
     pockets = sorted({item[0] for item in entries})
     print("pocket_files=%s" % pockets)
     report_path = os.path.join(path, "build_report.txt")

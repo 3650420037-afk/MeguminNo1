@@ -22,7 +22,10 @@ def obey_lipinski(mol):
     rule_1 = Descriptors.ExactMolWt(mol) < 500
     rule_2 = Lipinski.NumHDonors(mol) <= 5
     rule_3 = Lipinski.NumHAcceptors(mol) <= 10
-    rule_4 = (logp:=Crippen.MolLogP(mol)>=-2) & (logp<=5)
+    # 原写法 `(logp:=Crippen.MolLogP(mol)>=-2) & (logp<=5)` 中, 海象运算符优先级低于
+    # 比较符, logp 被赋成布尔值 -> `logp<=5` 恒真, 规则4 退化为"仅 logP>=-2"
+    _lp = Crippen.MolLogP(mol)
+    rule_4 = (-2 <= _lp <= 5)
     rule_5 = Chem.rdMolDescriptors.CalcNumRotatableBonds(mol) <= 10
     return np.sum([int(a) for a in [rule_1, rule_2, rule_3, rule_4, rule_5]])
     
@@ -103,8 +106,8 @@ class SimilarityWithTrain:
             torch.save(self.train_smiles, self.cfg_dataset.smiles)
             torch.save(self.train_fingers, self.cfg_dataset.fingerprint)
         else:
-            self.train_smiles = torch.load(self.cfg_dataset.smiles)
-            self.train_fingers = torch.load(self.cfg_dataset.fingerprint)
+            self.train_smiles = torch.load(self.cfg_dataset.smiles, weights_only=False)
+            self.train_fingers = torch.load(self.cfg_dataset.fingerprint, weights_only=False)
             self.train_smiles = np.array(self.train_smiles)
             # self.train_fingers = np.array(self.train_fingers)
 

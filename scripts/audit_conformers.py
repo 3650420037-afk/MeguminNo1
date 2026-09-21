@@ -46,11 +46,23 @@ def audit_sdf(path):
                 d = float(np.linalg.norm(pos[i] - pos[j]))
                 if not bonded and d < 0.7:
                     issues.append("overlap_%.2f_%d_%d" % (d, i, j))
-    # 共面塌缩：z 方差几乎为 0
+    # 平面性检查 (PCA, 与坐标轴无关): 旧写法用 pos.var(axis=0).min()<1e-3 判共面,
+    # 依赖分子是否恰好与坐标轴对齐 —— 实测 benzene 误报、naphthalene 漏检。
+    # 改用 SVD 最小主轴占比; 且只有"含 sp3 中心却整体近平面"才算塌缩
+    # (纯芳香平面分子本就该是平面, 不应误报)。
     if n >= 6:
-        var = pos.var(axis=0)
-        if var.min() < 1e-3:
-            issues.append("planar_collapse")
+        try:
+            centered = pos - pos.mean(axis=0)
+            sv = np.linalg.svd(centered, compute_uv=False)
+            if sv[0] > 1e-9 and sv[2] / sv[0] < 0.02:
+                has_sp3 = any(
+                    a.GetHybridization() == Chem.HybridizationType.SP3 and a.GetAtomicNum() != 1
+                    for a in mol.GetAtoms()
+                )
+                if has_sp3:
+                    issues.append("planar_collapse")
+        except Exception:
+            pass
     return issues
 
 def main(dataset):

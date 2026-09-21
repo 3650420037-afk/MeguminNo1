@@ -51,7 +51,8 @@ def main():
                          extrapolation=t.get("extrapolation", "?"), top_rank=top.get(smi, 0)))
 
     def tier(r):
-        if (r["vina"] <= -11 and r["qed"] >= 0.6 and (r["si"] or -999) > 0
+        if (r["vina"] <= -11 and r["qed"] >= 0.6
+                and (r["si"] is not None and r["si"] > 0)      # 不能用 `or -999`: SI 恰为 0.0 会被当假值
                 and r["assay"] != "red" and (r["alerts"] is None or r["alerts"] <= 2)
                 and (r["pose_gap"] is None or r["pose_gap"] >= 0.5)):
             return 1

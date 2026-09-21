@@ -739,11 +739,15 @@ class Pocket2MolGUI(tk.Tk):
         self._load_results(session)
 
     def _find_latest_session(self, outdir, since_ts):
-        """取 outdir 下 sample_for_pdb_* 会话目录中最新者。"""
+        """取 outdir 下 sample_for_pdb_* 会话目录中最新者。
+
+        注意: 只接受本次运行之后 (>= since_ts) 产生的目录。
+        旧实现 `return best or best_any` 会回退到**任意最新的历史会话**,
+        在后端启动失败(配置非法/解释器报错)时把上一次的 SMILES 当成本次结果显示。
+        """
         if not outdir or not os.path.isdir(outdir):
             return None
         best, best_mtime = None, -1.0
-        best_any, best_any_mtime = None, -1.0
         for name in os.listdir(outdir):
             path = os.path.join(outdir, name)
             if not name.startswith(SESSION_PREFIX) or not os.path.isdir(path):
@@ -752,11 +756,9 @@ class Pocket2MolGUI(tk.Tk):
                 mtime = os.path.getmtime(path)
             except OSError:
                 continue
-            if mtime > best_any_mtime:
-                best_any, best_any_mtime = path, mtime
             if mtime >= since_ts and mtime > best_mtime:
                 best, best_mtime = path, mtime
-        return best or best_any
+        return best
 
     def _load_results(self, session):
         self.list_result.delete(0, 'end')

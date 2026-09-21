@@ -19,8 +19,17 @@ from __future__ import print_function
 
 from rdkit import Chem
 from rdkit.Chem import rdMolDescriptors
-from rdkit.six.moves import cPickle
-from rdkit.six import iteritems
+# rdkit.six 在现代 RDKit(如 2026.03) 已被移除。旧写法在模块级直接 ImportError,
+# 使本模块无法独立导入(主链路靠先 import utils.guidance 注入 shim 才能用)。
+# 此处内联兼容 shim, 让任何调用方都能直接 from evaluation.sascorer import calculateScore。
+try:
+    from rdkit.six.moves import cPickle
+    from rdkit.six import iteritems
+except ImportError:                       # pragma: no cover
+    import pickle as cPickle
+
+    def iteritems(d, **kw):
+        return iter(d.items(**kw))
 
 import math
 from collections import defaultdict

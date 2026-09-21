@@ -1,0 +1,30 @@
+# Pocket2Mol 竞赛项目 — 实际运行环境依赖 (Windows, 实测 2026-09)
+#
+# 重要: 仓库根的 env_cuda113.yml 是**原版 Pocket2Mol 的 Linux 环境文件**
+#       (python 3.8 / pytorch 1.10.1+cu113 / rdkit 2022.03), 与本项目实际环境不一致,
+#       仅供溯源参考, 请勿用它复现环境。
+#
+# torch 需按本机 CUDA 版本单独安装 (2.6.0 对应 cu124):
+#   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+#
+# 环境自检: python docs/pocket2mol_demo.ipynb 或
+#           python scripts/verify_hardening.py
+
+torch==2.6.0
+torch-geometric==2.8.0
+torch-scatter
+torch-cluster
+rdkit
+biopython
+lmdb
+easydict
+PyYAML
+tqdm
+tensorboard
+numpy
+python-pptx        # docs/make_ppt.py (竞赛 PPT 生成器) 需要
+
+# 说明:
+# - 本工程含 Windows/PyTorch 2.6 兼容补丁 (utils/misc.py, utils/transforms.py,
+#   models/common.py), 请勿降级 torch 到 2.6 以下或删除补丁。
+# - GPU: 需 NVIDIA 显卡与驱动 (实测 RTX 4070 Laptop 8GB)。

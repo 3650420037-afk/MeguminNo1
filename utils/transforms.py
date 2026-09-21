@@ -25,7 +25,7 @@ try:
     from .misc import *
     from .train import inf_iterator
     from .protein_ligand import ATOM_FAMILIES
-except:
+except ImportError:
     from utils.data import ProteinLigandData
     from utils.datasets import *
     from utils.misc import *

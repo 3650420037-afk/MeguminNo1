@@ -29,7 +29,7 @@ if __name__ == '__main__':
     logger.info(args)
     logger.info(save_path)
 
-    samples = torch.load(save_path, map_location='cpu')
+    samples = torch.load(save_path, map_location='cpu', weights_only=False)  # torch2.6 默认 weights_only=True 会拒载自产 pickle
 
     sim_with_train = SimilarityWithTrain()
     results = []

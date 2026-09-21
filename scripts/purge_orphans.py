@@ -43,6 +43,17 @@ for ds in SRC:
         print("%s round%d: %d -> %d (剔 %s)" % (ds, round_i, len(index), len(clean), bad))
         pickle.dump(clean, open(os.path.join(d, "index.pkl"), "wb"))
         rebuild_split(d, clean)
+        # 同步更新 build_report.txt, 避免报告与 index 数字矛盾 (实测曾出现 a2a 报141 而 index=136)
+        rep = os.path.join(d, "build_report.txt")
+        if os.path.exists(rep):
+            try:
+                lines = open(rep, encoding="utf-8").read().splitlines()
+                lines = [l for l in lines if not l.startswith(("valid_pairs=", "train=", "val=", "purged="))]
+                lines.append("valid_pairs=%d" % len(clean))
+                lines.append("purged=%d (孤立原子清洗, scripts/purge_orphans.py)" % len(index))
+                open(rep, "w", encoding="utf-8").write("\n".join(lines) + "\n")
+            except Exception as e:
+                print("  WARN 更新 build_report 失败: %s" % e)
         for suf in ["_processed.lmdb", "_name2id.pt"]:
             p = os.path.join(BASE, ds + suf)
             if os.path.exists(p): os.remove(p)
@@ -52,11 +63,16 @@ for ds in SRC:
 for suf in ["gpcr_multitarget_v2_processed.lmdb", "gpcr_multitarget_v2_name2id.pt"]:
     p = os.path.join(BASE, suf)
     if os.path.exists(p): os.remove(p)
-r = subprocess.run([PY, os.path.join(r"D:\MMModel\Pocket2Mol\scripts", "merge_gpcr_datasets.py"),
-                    "--inputs"] + [os.path.join(BASE, s) for s in SRC] +
-                   ["--output", os.path.join(BASE, "gpcr_multitarget_v2")],
-                   stdout=open(os.path.join(BASE, "merge_log.txt"), "w"), stderr=subprocess.STDOUT)
+with open(os.path.join(BASE, "merge_log.txt"), "w", encoding="utf-8") as _mlog:
+    r = subprocess.run([PY, os.path.join(r"D:\MMModel\Pocket2Mol\scripts", "merge_gpcr_datasets.py"),
+                        "--inputs"] + [os.path.join(BASE, s) for s in SRC] +
+                       ["--output", os.path.join(BASE, "gpcr_multitarget_v2")],
+                       stdout=_mlog, stderr=subprocess.STDOUT)
 print("merge exit:", r.returncode)
+if r.returncode != 0:
+    # 合并失败必须中止: 否则后续步骤会在过期产物上给出"干净"的假结论
+    print("ERROR: merge 失败, 中止 (详见 merge_log.txt)")
+    raise SystemExit(1)
 
 # 3) 审计合并产物, 若有脏则从 index 剔并重建 split (SDF 文件冗余无碍)
 d = os.path.join(BASE, "gpcr_multitarget_v2")

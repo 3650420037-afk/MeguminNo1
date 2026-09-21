@@ -382,7 +382,11 @@ def qed_histogram(qeds):
             continue
         counts[min(int(q * 10), 9)] += 1
         n += 1
+    if n == 0:
+        return ["---- QED distribution (无可统计分子) ----"]
     mx = max(counts) if counts else 1
+    if mx <= 0:                      # 防御: 全 None 时 max(counts)=0 会导致下方除零
+        mx = 1
     lines = ["---- QED distribution (n=%d) ----" % n]
     for i, c in enumerate(counts):
         bar = "#" * int(round(40.0 * c / mx))

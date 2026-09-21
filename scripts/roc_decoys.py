@@ -60,10 +60,11 @@ def roc(pos, neg, thresholds):
 
 def auc_from_roc(rows):
     """梯形法 (TPR 对 FPR 积分), rows 按阈值从松到紧"""
+    trap = getattr(np, "trapezoid", None) or np.trapz   # 兼容 numpy<2 (trapz 已弃用)
     pts = sorted(set((f, t) for _, t, f, _, _ in rows))
     xs = [0.0] + [p[0] for p in pts]
     ys = [0.0] + [p[1] for p in pts]
-    return float(np.trapz(ys, xs))
+    return float(trap(ys, xs))
 
 
 def main():
