@@ -9,8 +9,14 @@ from rdkit.Chem import AllChem, Descriptors, Crippen, Lipinski
 from rdkit.Chem.QED import qed
 from easydict import EasyDict
 from utils.reconstruct import reconstruct_from_generated_with_edges
-from sascorer import compute_sa_score
-from docking import QVinaDockingTask
+# 裸导入只在 cwd=evaluation 时成立; 补包内导入兼容, 否则
+# `from evaluation.scoring_func import ...` 会 ModuleNotFoundError
+try:
+    from .sascorer import compute_sa_score
+    from .docking import QVinaDockingTask
+except ImportError:
+    from sascorer import compute_sa_score
+    from docking import QVinaDockingTask
 from utils.datasets import get_dataset
 from rdkit.Chem.FilterCatalog import *
 

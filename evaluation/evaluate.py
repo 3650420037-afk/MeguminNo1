@@ -8,7 +8,11 @@ import sys
 sys.path.append('.')
 
 from utils.reconstruct import reconstruct_from_generated_with_edges
-from sascorer import compute_sa_score
+# 裸导入只在 cwd=evaluation 时成立; 补包内导入兼容 (见 scoring_func.py 同处说明)
+try:
+    from .sascorer import compute_sa_score
+except ImportError:
+    from sascorer import compute_sa_score
 from evaluation.docking import *
 from utils.misc import *
 from evaluation.scoring_func import *

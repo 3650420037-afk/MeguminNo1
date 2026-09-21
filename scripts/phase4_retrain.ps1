@@ -1,4 +1,4 @@
-$ErrorActionPreference = 'Continue'
+﻿$ErrorActionPreference = 'Continue'
 $repo = "D:\MMModel\Pocket2Mol"
 $py = "D:\Miniconda3\envs\Pocket2Mol\python.exe"
 $out = "$repo\outputs\overnight_phase2"
