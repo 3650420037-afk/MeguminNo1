@@ -80,7 +80,10 @@ def run_cmd(cmd, log_path, err_path, timeout=None):
 
 
 def read_text(path):
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    # utf-8-sig: 兼容带 BOM 的文件。旧写法 utf-8 + line.strip() 无法去除 U+FEFF
+    # (它不是空白字符), 会让首行 smiles 带着 BOM 进入 summary.csv, 与库 CSV 主键
+    # 不一致而静默丢样 (实测每靶点丢 1 个候选)。
+    with open(path, "r", encoding="utf-8-sig", errors="replace") as f:
         return f.read()
 
 
@@ -308,7 +311,7 @@ def main(argv=None):
     ligands = []  # (name, smiles_or_None, sdf_or_None)
     if args.smiles_file:
         for i, line in enumerate(read_text(args.smiles_file).splitlines(), 1):
-            s = line.strip()
+            s = line.strip().lstrip("\ufeff")      # 双保险: 去 BOM
             if s:
                 ligands.append(("lig_%03d" % len(ligands), s, None))
     for s in args.smiles:
@@ -362,11 +365,23 @@ def main(argv=None):
         score = None
         if sdf is not None:
             pdbqt, status = convert_sdf_to_pdbqt(sdf, name, ligdir, logdir)
+            # 用 open()+MolFromMolBlock 读 SDF: RDKit C++ 文件 API 在 Windows 上打不开
+            # 含中文的路径 (旧写法 MolFromMolFile 抛 OSError, 被 except 吞掉后 smiles="",
+            # 使 summary.csv 无法与库 CSV 关联)。
+            # 同时 MolToSmiles 前必须 RemoveHs: 否则输出 [H]OC([H])([H])... 显式氢 SMILES,
+            # 与库中的规范 SMILES 永久不匹配。
             try:
-                m = Chem.MolFromMolFile(sdf, removeHs=False)
-                smiles = (Chem.MolToSmiles(m) if m is not None else "")
-            except Exception:
+                with open(sdf, encoding="utf-8", errors="ignore") as fh:
+                    block = fh.read()
+                m = Chem.MolFromMolBlock(block, removeHs=False, sanitize=True)
+                if m is None:
+                    smiles = ""
+                    log("  WARN: %s SDF 解析失败(MolFromMolBlock=None), smiles 留空" % name)
+                else:
+                    smiles = Chem.MolToSmiles(Chem.RemoveHs(m))
+            except Exception as e:
                 smiles = ""
+                log("  WARN: %s 读取 SDF 异常 %s: %s" % (name, type(e).__name__, e))
         else:
             pdbqt, status = prep_ligand_smiles(smiles, name, ligdir, logdir)
         if pdbqt is None:

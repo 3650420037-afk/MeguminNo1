@@ -152,17 +152,30 @@ class App:
         self.session_dir = os.path.join(OUTROOT, "easy_" + ts)
         os.makedirs(self.session_dir, exist_ok=True)
         cfgp = os.path.join(self.session_dir, "config.yml")
-        src = open(os.path.join(REPO, "configs", "sample_for_pdb_guided_l3.yml"), encoding="utf-8-sig").read()
-        import re
-        cfg = re.sub(r"seed: \d+", "seed: %d" % int(p["seed"]), src)
-        cfg = re.sub(r"num_samples: \d+", "num_samples: %d" % int(p["num_samples"]), cfg)
-        cfg = re.sub(r"beam_size: \d+", "beam_size: %d" % int(p["beam_size"]), cfg)
-        cfg = re.sub(r"max_steps: \d+", "max_steps: %d" % int(p["max_steps"]), cfg)
-        if "diversity_w" not in cfg:
-            cfg = cfg.rstrip() + "\n    diversity_w: %s\n" % p["diversity_w"]
-        else:
-            cfg = re.sub(r"diversity_w: [\d.]+", "diversity_w: %s" % p["diversity_w"], cfg)
-        open(cfgp, "w", encoding="utf-8").write(cfg)
+        # 配置生成交给结构化生成器 (PyYAML 读改写):
+        # 旧实现"在模板末尾追加缩进行"在模板结构变化(如新增 relax_output)后会产出非法
+        # YAML, 导致后端 load_config 抛 ScannerError 秒崩; 该生成器同时支持 λ 覆盖,
+        # 修复了界面 λ 参数无效的问题。
+        gen = os.path.join(REPO, "scripts", "gen_sample_config.py")
+        tmpl = os.path.join(REPO, "configs", "sample_for_pdb_guided_l3.yml")
+        gen_cmd = [PY, gen, "--template", tmpl, "--out", cfgp,
+                   "--seed", str(int(p["seed"])),
+                   "--num-samples", str(int(p["num_samples"])),
+                   "--beam", str(int(p["beam_size"])),
+                   "--max-steps", str(int(p["max_steps"])),
+                   "--lam", str(p["lam"]),
+                   "--diversity-w", str(p["diversity_w"]),
+                   "--guided", "1"]
+        try:
+            gres = subprocess.run(gen_cmd, cwd=REPO, timeout=120,
+                                  stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                  creationflags=subprocess.CREATE_NO_WINDOW)
+            if gres.returncode != 0 or not os.path.exists(cfgp):
+                messagebox.showerror("配置生成失败",
+                                     (gres.stdout or b"").decode("utf-8", "ignore")[-400:] or "生成器返回非零")
+                return
+        except Exception as e:
+            messagebox.showerror("配置生成失败", str(e)); return
 
         self.log_path = os.path.join(self.session_dir, "run.log")
         lf = open(self.log_path, "w", encoding="utf-8")
@@ -214,33 +227,59 @@ class App:
                 self.btn_start.configure(state="normal"); self.btn_open.configure(state="normal")
 
     def _postprocess(self):
+        """过滤入库 (后台线程)。整段兜底: 任何异常都在 finally 恢复按钮并报错,
+        避免按钮永久禁用、状态停在"正在自动过滤"而用户无法继续。"""
         lib = os.path.join(self.session_dir, "library")
-        r = subprocess.run([PY, os.path.join(REPO, "scripts", "build_library.py"),
-                            "--runs", self.session_dir, "--library", lib],
-                           cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=600,
-                           creationflags=subprocess.CREATE_NO_WINDOW)
-        csvp = os.path.join(lib, "compounds.csv")
-        if r.returncode != 0 or not os.path.exists(csvp):
-            self.root.after(0, lambda: (self.status.set("过滤完成但入库异常，显示原始分子。"),
-                                        self._load_raw(), self.btn_start.configure(state="normal"),
+        try:
+            r = subprocess.run([PY, os.path.join(REPO, "scripts", "build_library.py"),
+                                "--runs", self.session_dir, "--library", lib],
+                               cwd=REPO, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=900,
+                               creationflags=subprocess.CREATE_NO_WINDOW)
+            csvp = os.path.join(lib, "compounds.csv")
+            if r.returncode != 0 or not os.path.exists(csvp):
+                self.root.after(0, lambda: (self.status.set("过滤完成但入库异常，显示原始分子。"),
+                                            self._load_raw(),
+                                            self.btn_start.configure(state="normal"),
+                                            self.btn_open.configure(state="normal")))
+                return
+            rows = []
+            with open(csvp, encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    try:
+                        row["_qed"] = float(row["qed"])
+                    except (TypeError, ValueError):
+                        row["_qed"] = 0.0          # build_library 对计算失败分子写空串
+                    rows.append(row)
+            rows.sort(key=lambda x: -x["_qed"])
+            self.root.after(0, lambda: self._fill(rows, lib))
+        except Exception as e:
+            msg = "%s: %s" % (type(e).__name__, e)
+            self.root.after(0, lambda: (self.status.set("过滤阶段异常，显示原始分子。"),
+                                        self._load_raw(),
+                                        messagebox.showwarning("过滤异常", msg),
+                                        self.btn_start.configure(state="normal"),
                                         self.btn_open.configure(state="normal")))
-            return
-        rows = list(csv.DictReader(open(csvp, encoding="utf-8")))
-        rows.sort(key=lambda x: -float(x["qed"]))
-        self.root.after(0, lambda: self._fill(rows, lib))
 
     def _load_raw(self):
         f = glob.glob(os.path.join(self.session_dir, "**", "SMILES.txt"), recursive=True)
         if not f: return
-        for i, s in enumerate([x for x in open(f[0], encoding="utf-8").read().splitlines() if x.strip()], 1):
+        self.tree.delete(*self.tree.get_children())
+        with open(f[0], encoding="utf-8-sig") as fh:     # sig: 兼容带 BOM 的首行
+            lines = [x for x in fh.read().splitlines() if x.strip()]
+        for i, s in enumerate(lines, 1):
             self.tree.insert("", "end", iid=str(i), values=(i, "-", "-", s))
 
     def _fill(self, rows, lib):
         self.lib_dir = lib
         self.tree.delete(*self.tree.get_children())
         for i, r in enumerate(rows, 1):
+            qed = r.get("_qed", 0.0)
+            try:
+                mw = float(r["mw"])
+            except (TypeError, ValueError):
+                mw = 0.0
             self.tree.insert("", "end", iid=str(i),
-                             values=(i, "%.3f" % float(r["qed"]), "%.0f" % float(r["mw"]), r["smiles"]))
+                             values=(i, "%.3f" % qed, "%.0f" % mw, r["smiles"]))
         self.status.set("完成！共 %d 个通过药物过滤的候选分子。点击行查看结构。" % len(rows))
         self.progress["value"] = 100
         self.btn_start.configure(state="normal"); self.btn_open.configure(state="normal")
@@ -318,6 +357,25 @@ class App:
             self.btn_start.configure(state="normal"); self.btn_stop.configure(state="disabled")
             self.btn_open.configure(state="normal")
 
+    def on_close(self):
+        """关窗协议: 采样中关闭须确认, 并确保子进程被终止 (避免孤儿进程占 GPU/继续写盘)。"""
+        if self.proc is not None:
+            if not messagebox.askyesno("确认退出", "正在生成分子，退出将终止本次采样。\n已产出的中间快照会保留。是否退出？"):
+                return
+            try:
+                self.proc.terminate()
+                try:
+                    self.proc.wait(timeout=10)
+                except Exception:
+                    self.proc.kill()
+            except Exception:
+                pass
+            self.proc = None
+        try:
+            self.root.destroy()
+        except Exception:
+            pass
+
 if __name__ == "__main__":
     root = tk.Tk()
     try:
@@ -326,4 +384,5 @@ if __name__ == "__main__":
     except Exception:
         pass
     app = App(root)
+    root.protocol("WM_DELETE_WINDOW", app.on_close)
     root.mainloop()
