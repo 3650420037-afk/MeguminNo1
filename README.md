@@ -1,4 +1,4 @@
-# 7-eonmol · GPCR 靶向分子生成器
+﻿# 7-eonmol · GPCR 靶向分子生成器
 
 > **基于 Pocket2Mol 的引导束搜索改进** · 四靶点 6,864 个类药化合物 · 六层计算评估 · 全流程开源
 
@@ -347,7 +347,7 @@ python scripts/verify_all_fixes.py      # 36 项工程校验
 | `化合物库/pareto_front.csv` | 五目标 Pareto 前沿 |
 | `化合物库/pose_consistency.csv` | 对接姿态一致性 |
 | `化合物库/final_recommendation.csv` | 六维 Tier 推荐 |
-| `docs/Pocket2Mol_模型百科全书.md` | **项目技术全书**（12 章：模型解构 / 改进 / 评估体系 / 迭代史 / 缺陷审计） |
+| `docs/7-eonmol_技术全书.md` | **项目技术全书**（12 章：模型解构 / 改进 / 评估体系 / 迭代史 / 缺陷审计） |
 
 > 说明：大文件（预训练权重、数据集、输出目录）走 `.gitignore` 不进 git 历史，按需放置在对应目录。
 
@@ -410,4 +410,4 @@ Copyright (c) 2022 Xingang Peng）构建，原许可与版权声明见 [`LICENSE
 ---
 
 <sub>本 README 中的全部数字均由仓库内脚本对实际产物统计得出，可逐文件追溯；
-更完整的技术细节见 `docs/Pocket2Mol_模型百科全书.md`。</sub>
+更完整的技术细节见 `docs/7-eonmol_技术全书.md`。</sub>
