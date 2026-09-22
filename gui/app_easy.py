@@ -1,5 +1,5 @@
-# -*- coding: utf-8 -*-
-"""GPCR 小分子药物生成器 — 外行友好版 GUI (打包用)
+﻿# -*- coding: utf-8 -*-
+"""7-eonmol — 外行友好版 GUI (打包用)
 
 依赖: 仅 Python 标准库(Tkinter)。计算全部通过子进程调用 Pocket2Mol 环境。
 默认后端: D:\\Miniconda3\\envs\\Pocket2Mol\\python.exe (可在本文件常量或 config.json 修改)。
@@ -8,7 +8,7 @@ import os, sys, json, csv, re, threading, subprocess, time, glob
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-APP_TITLE = "GPCR 小分子药物生成器"
+APP_TITLE = "7-eonmol"
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _EXE_DIR = os.path.dirname(sys.executable) if getattr(sys, "frozen", False) else _HERE
 REPO = r"D:\MMModel\Pocket2Mol"
@@ -290,7 +290,7 @@ class App:
             messagebox.showinfo("提示", "请先在列表中点击一个分子"); return None
         return self.tree.set(sel[0], "smiles")
 
-    def _show_mol(self):
+    def _show_mol(self, event=None):
         smi = self._selected_smiles()
         if not smi: return
         png = os.path.join(self.session_dir, "_mol.png")

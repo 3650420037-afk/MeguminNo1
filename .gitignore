@@ -1,4 +1,4 @@
-# ========== 大文件:走 GitHub Releases,不进 git 历史 ==========
+﻿# ========== 大文件:走 GitHub Releases,不进 git 历史 ==========
 # 预训练权重(44.9MB)与微调权重 —— 放 Releases 分发,避免仓库臃肿
 ckpt/*.pt
 
@@ -28,4 +28,8 @@ __pycache__/
 .idea/
 .DS_Store
 Thumbs.db
-
+# ========== GUI 构建产物:不进 git(体积大且可重现) ==========
+# PyInstaller 中间产物与打包输出; 分发用 Release 或部署包
+gui/build/
+gui/dist/
+gui/*.spec

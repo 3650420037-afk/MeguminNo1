@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """全工程修复验证清单 (端到端)
 
 对本次 bug 审计后的所有修复做可自动判定的验证, 输出 PASS/FAIL。
@@ -126,7 +126,7 @@ for n in pairs:
     if h(os.path.join(REPO, n)) and h(os.path.join(REPO, n)) == h(os.path.join(dst, "repo", n)):
         same += 1
 chk("部署包关键文件同步 9/9", same == len(pairs), "%d/%d" % (same, len(pairs)))
-chk("部署包 exe 存在", os.path.exists(os.path.join(dst, "GPCR药物生成器.exe")))
+chk("部署包 exe 存在", os.path.exists(os.path.join(dst, "7-eonmol.exe")))
 chk("PPT 已生成", any(f.endswith(".pptx") for f in os.listdir(r"C:\Users\31908\Desktop")))
 
 # 9) 报告/文档

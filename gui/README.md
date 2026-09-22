@@ -1,4 +1,72 @@
-# Pocket2Mol 采样 GUI 使用说明
+﻿# Pocket2Mol 采样 GUI 使用说明
+
+## v2.0 Pro 版（推荐）
+
+面向"外行友好 + 可直接分发"的新版界面，源码 `gui/app_pro.py`，打包产物
+**`gui\dist\7-eonmol.exe`**（单文件、无控制台、Windows x64、9.9 MB）。
+
+**启动方式**
+
+- **快速启动版（推荐日常使用）**：双击桌面快捷方式 `7-eonmol (快速启动).lnk`，
+  或 `gui\dist\fast\7-eonmol\7-eonmol.exe` —— 免解压目录版，实测启动 1.3–2.7 秒
+- **单文件版（推荐分发）**：`gui\dist\7-eonmol.exe` —— 单文件免安装，实测启动约 2.6 秒
+- 源码运行：`D:\Miniconda3\envs\Pocket2Mol\python.exe gui\app_pro.py [--tab 0-3] [--theme dark]`
+
+**启动耗时优化记录**（原 onefile 版冷启动 22 秒 → 2.6 秒）
+
+| 措施 | 效果 |
+|---|---|
+| 环境自检改为后台线程执行（原实现同步等待 `import torch` 子进程 5–15 秒，把窗口显示一起卡住） | 主要收益 |
+| 排除无关模块（numpy/torch/rdkit/PIL/ssl/hashlib/sqlite3/setuptools 等） | 单文件 9.9→7.7 MB |
+| 裁剪 Tcl/Tk 冗余数据（tzdata 时区、msgs 多语言、多余编码，共约 800 个文件） | 快速版 983→171 个文件 |
+| 额外提供 onedir 快速启动版（无解压步骤） | 再次启动 1.3 秒 |
+
+> 首次在新机器上运行或刚复制完成时，Windows Defender 会扫描新文件，可能额外增加数秒；
+> 把程序目录加入杀软白名单可消除该影响。
+
+**界面结构（4 个标签页 + 顶栏按钮）**
+
+| 标签页 | 作用 |
+|---|---|
+| 生成分子 | 选靶点卡片 → 开始生成 → 进度/状态 → 候选表排序筛选 → 2D 结构预览 → 导出 SDF/CSV |
+| 候选库浏览 | 读取 `D:\MMModel\化合物库` 下任意 CSV（26 个数据文件），排序、看结构、导出视图 |
+| 分析结果 | 汇总化合物库 CSV、对接 summary、桌面报告（md/pptx/pdf），双击用系统程序打开并预览前 60 行 |
+| 环境设置 | 修改仓库/解释器/靶点目录等路径（写 `gui_config.json`，立即生效）+ 一键环境自检 |
+
+顶栏右侧：`?` 打开使用说明窗口，`☾/☀` 切换浅色 / 深色主题，环境状态灯常驻显示。
+主流程刻意保持最简：**选靶点 → 点「开始生成分子」→ 看结果**，界面上不出现分步引导文字。
+
+**相对旧版 (app_easy.py / app.py) 的改进**
+
+- 现代观感：圆角自绘按钮、卡片式靶点选择、分区标题、树表隔行色、Canvas 圆角图标
+- **浅色 / 深色双主题**，右上角一键切换（含全部 ttk 样式与自绘控件）
+- 高 DPI 适配：源码运行按 DPI 放大窗口并同步 Tk 缩放；打包版交由系统统一缩放，避免字体二次放大
+- 自绘控件宽度用字体实测值自适应（`ui_kit.measure`），任何 DPI/字体下都不裁字
+- 结果表：点击表头排序、类药分阈值滑块、关键字搜索、统计摘要（候选数 / QED 中位）、导出 CSV
+- 靶点卡片直接显示 PDB 代码、口袋中心与适应症；界面无"第 N 步"式引导文字
+- 帮助改为顶栏 `?` 弹窗（原先占用一个主标签页，属于层级误用）
+- `--tab`/`--theme` 启动参数
+- 关闭窗口时仍在采样会二次确认并终止子进程（不产生孤儿进程占 GPU）
+
+**打包（可复现）**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File gui\build_exe.ps1
+```
+
+脚本依次：生成图标 → 归档旧 exe 到 `gui\dist\legacy\` → PyInstaller onefile 打包
+（`--add-binary tcl86t.dll/tk86t.dll`，conda Tk 8.6）→ 校验产物大小。
+`.ps1` 必须带 UTF-8 BOM，否则 Windows PowerShell 5.1 按 GBK 读会语法报错。
+
+**开发自检**
+
+```powershell
+D:\Miniconda3\envs\Pocket2Mol\python.exe -m py_compile gui\app_pro.py gui\ui_kit.py
+```
+
+---
+
+## 旧版说明（`gui/app.py`，保留）
 
 基于 **Python 标准库 Tkinter** 的本地图形界面（零额外依赖），用于驱动后端
 `sample_for_pdb.py` 完成口袋分子生成：选靶点 → 配参数 → 跑采样 → 看进度 →
@@ -120,3 +188,4 @@ outputs/
   ```bat
   D:\Miniconda3\envs\Pocket2Mol\python.exe -m py_compile D:\MMModel\Pocket2Mol\gui\app.py
   ```
+
