@@ -301,6 +301,20 @@ class MaskFillModelVN(Module):
                           compose_knn_edge_index, compose_knn_edge_feature, real_compose_knn_edge_index,  fake_compose_knn_edge_index  # edges in compose, query-compose
         ):
 
+        # # 边界守卫: 上下文为空时(配体被全部掩码), frontier 与位置预测没有任何可监督的目标,
+        # # BCE / 负对数似然作用在空张量上会返回 NaN。train.py 的 loss_components 有限性检查
+        # # 会因此跳过整批迭代 —— 表现为"每约 11 个 batch 就有 1 个被静默跳过"(实测 8.6%~9.4%,
+        # # 且与数据集内容无关)。
+        # # 触发原因在配置: train.transform.mask 的 max_ratio=1.1 且 min_num_unmasked=0 时,
+        # # 掩码比例 = clip(U(0,1.1),0,1) 有 1/11 = 9.09% 的概率取到 1.0。
+        # # 配置侧已统一改为 min_num_unmasked: 1; 这里再加一层兜底, 返回零损失而非 NaN,
+        # # 语义为"本批无监督信号"。loss 保留计算图以便 backward 安全。
+        if (idx_ligand is None or idx_ligand.numel() == 0
+                or idx_focal is None or idx_focal.numel() == 0):
+            zero_grad = compose_pos.sum() * 0.0
+            zero = torch.zeros((), device=compose_pos.device, dtype=torch.float32)
+            return (zero_grad, zero, zero, zero, zero, zero, zero, zero)
+
         # # emebedding
         h_compose = embed_compose(compose_feature, compose_pos, idx_ligand, idx_protein,
                                       self.ligand_atom_emb, self.protein_atom_emb, self.emb_dim)
