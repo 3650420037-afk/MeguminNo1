@@ -1,5 +1,5 @@
 model:
-    checkpoint: D:/MMModel/Pocket2Mol/logs/train_multitarget_v2_2026_08_30__10_12_44/checkpoints/2000.pt
+    checkpoint: logs/train_multitarget_v2_2026_08_30__10_12_44/checkpoints/2000.pt
 
 sample:
   seed: 2024

@@ -1,0 +1,15 @@
+CCCn1c(=S)sc2c1ncn1nc(-c3ccco3)nc21
+CCn1c(=S)sc2c1ncn1nc(-c3ccco3)nc21
+CCCCn1c(=S)sc2c1ncn1nc(-c3ccco3)nc21
+C=CCn1c(=S)sc2c1ncn1nc(-c3ccco3)nc21
+S=c1sc2c(ncn3nc(-c4ccco4)nc23)n1-c1ccccc1
+Fc1ccc(-n2c(=S)sc3c2ncn2nc(-c4ccco4)nc32)cc1
+S=c1sc2c(ncn3nc(-c4ccco4)nc23)n1-c1ccc(Cl)cc1
+S=c1sc2c(ncn3nc(-c4ccco4)nc23)n1-c1cccc(Cl)c1
+S=c1sc2c(ncn3nc(-c4ccco4)nc23)n1-c1ccccc1I
+S=c1sc2c(ncn3nc(-c4ccco4)nc23)n1-c1ccc(I)cc1
+CCNC(=O)[C@H]1O[C@@H](n2cnc3c(NCC(c4ccccc4)c4ccccc4)nc(C(=O)NCCNC(=O)NCc4ccc(C(=O)O)cc4)nc32)[C@H](O)[C@@H]1O
+Nc1nc(-c2ccccc2)c2c(n1)-c1cc(OCCN3CCOCC3)ccc1C2=O
+Nc1nc(-c2ccccc2)c2c(n1)-c1cc(NCCN3CCOCC3)ccc1C2=O
+Nc1nc(-c2ccccc2)c2c(n1)-c1cc(NCCN3CCS(=O)(=O)CC3)ccc1C2=O
+CCN1CCC(N(C)c2ccc3c(c2)-c2nc(N)nc(-c4ccccc4)c2C3=O)CC1

@@ -11,22 +11,22 @@
 ================================================================================
 一、代码与配置 (✅ 全部已有)
 ================================================================================
-[✅] D:\MMModel\Pocket2Mol\          Pocket2Mol 完整代码仓库(GitHub 克隆)
-[✅] D:\MMModel\Pocket2Mol\configs\train.yml            训练配置文件
-[✅] D:\MMModel\Pocket2Mol\configs\sample.yml           测试集采样配置
-[✅] D:\MMModel\Pocket2Mol\configs\sample_for_pdb.yml   PDB 采样配置
-[✅] D:\MMModel\Pocket2Mol\train.py                     训练主程序
-[✅] D:\MMModel\Pocket2Mol\sample.py                    采样主程序
-[✅] D:\MMModel\Pocket2Mol\sample_for_pdb.py            PDB 采样程序
-[✅] D:\MMModel\Pocket2Mol\utils\misc.py                工具(含兼容补丁)
-[✅] D:\MMModel\Pocket2Mol\models\                      模型代码(等变GNN)
-[✅] D:\MMModel\Pocket2Mol\evaluation\                  评估代码
+[✅] \          Pocket2Mol 完整代码仓库(GitHub 克隆)
+[✅] configs/train.yml            训练配置文件
+[✅] configs/sample.yml           测试集采样配置
+[✅] configs/sample_for_pdb.yml   PDB 采样配置
+[✅] train.py                     训练主程序
+[✅] src/sample.py                    采样主程序
+[✅] src/sample_for_pdb.py            PDB 采样程序
+[✅] src/utils/misc.py                工具(含兼容补丁)
+[✅] src/models/                      模型代码(等变GNN)
+[✅] src/evaluation/                  评估代码
 
 
 ================================================================================
 二、预训练权重 (✅ 已有)
 ================================================================================
-[✅] D:\MMModel\Pocket2Mol\ckpt\pretrained_Pocket2Mol.pt
+[✅] models/pretrained_Pocket2Mol.pt
      预训练权重 (44.9MB, 370万参数)
      用途: 微调(方向2)的起点 + 直接生成(基线)
      状态: 已下载,可直接使用
@@ -35,7 +35,7 @@
 ================================================================================
 三、训练数据集 (❌ 缺失 - 无法访问,需您补全)
 ================================================================================
-[❌] D:\MMModel\Pocket2Mol\data\crossdocked_pocket10\
+[❌] data/crossdocked_pocket10\
      CrossDocked2020 蛋白-配体对数据集 (约10万对,数GB)
      用途: Pocket2Mol 完整训练(训练到500K步)的核心数据
      来源: Google Drive
@@ -44,7 +44,7 @@
      ★需要您: 通过代理/VPN/海外渠道下载 crossdocked_pocket10.tar.gz
        (约1-2GB),解压后放入 data\crossdocked_pocket10\
 
-[❌] D:\MMModel\Pocket2Mol\data\split_by_name.pt
+[❌] data/split_by_name.pt
      数据划分文件(训练/验证/测试集划分)
      用途: 训练时按此文件划分数据集
      来源: 与上面同一个 Google Drive 文件夹
@@ -55,29 +55,29 @@
 ================================================================================
 四、靶点蛋白结构 (✅ 已有,可选的 D3/5HT2B 已补)
 ================================================================================
-[✅] D:\MMModel\靶点结构\4EIY_A2A受体.pdb
+[✅] data/targets/4EIY_A2A受体.pdb
      A2A 腺苷受体 (分辨率 1.8Å, 含共结晶配体 ZMA)
      用途: 生成/采样输入 + GUI 内置靶点
      口袋中心: -0.4, 8.5, 17.1 (由 ZMA 配体计算)
 
-[✅] D:\MMModel\靶点结构\2RH1_β2肾上腺素受体.pdb
+[✅] data/targets/2RH1_β2肾上腺素受体.pdb
      β2-AR 肾上腺素受体 (分辨率 2.4Å, 含共结晶配体 CAU)
      用途: 生成/采样输入 + GUI 内置靶点
      口袋中心: -29.5, 9.2, 6.9 (由 CAU 配体计算)
 
-[✅] D:\MMModel\靶点结构\3PBL_D3多巴胺受体.pdb
+[✅] data/targets/3PBL_D3多巴胺受体.pdb
      D3 多巴胺受体 (分辨率 2.9Å)
      用途: 备选靶点
 
-[✅] D:\MMModel\靶点结构\4IB4_5HT2B受体.pdb
+[✅] data/targets/4IB4_5HT2B受体.pdb
      5-HT2B 受体 (分辨率 2.8Å)
      用途: 备选靶点
 
-[✅] D:\MMModel\靶点结构\4EIY_配体ZMA.cif
+[✅] data/targets/4EIY_配体ZMA.cif
      4EIY 共结晶配体 ZMA (CIF格式)
      用途: 确定口袋中心 + 参考配体
 
-[✅] D:\MMModel\靶点结构\2RH1_配体CAU.cif
+[✅] data/targets/2RH1_配体CAU.cif
      2RH1 共结晶配体 CAU (CIF格式)
      用途: 确定口袋中心 + 参考配体
 
@@ -85,37 +85,37 @@
 ================================================================================
 五、靶点活性配体数据 (✅ 已有,用于微调方向2)
 ================================================================================
-[✅] D:\MMModel\配体数据\A2A_活性配体.csv
+[✅] data/ligands/A2A_活性配体.csv
      A2A 受体已知活性配体 (pChEMBL≥6, 即IC50≤1μM)
      数量: 175 个唯一分子 (含SMILES)
      用途: 方向2 靶点微调训练数据
 
-[✅] D:\MMModel\配体数据\B2AR_活性配体.csv
+[✅] data/ligands/B2AR_活性配体.csv
      β2-AR 受体已知活性配体 (pChEMBL≥6)
      数量: 191 个唯一分子 (含SMILES)
      用途: 方向2 靶点微调训练数据
 
-[✅] D:\MMModel\配体数据\D3_活性配体.csv
+[✅] data/ligands/D3_活性配体.csv
      D3 多巴胺受体已知活性配体 (pChEMBL≥6)
      数量: 99 个唯一分子 (含SMILES)
      用途: 方向2 靶点微调训练数据
 
-[✅] D:\MMModel\配体数据\5HT2B_活性配体.csv
+[✅] data/ligands/5HT2B_活性配体.csv
      5-HT2B 受体已知活性配体 (pChEMBL≥6)
      数量: 81 个唯一分子 (含SMILES)
      用途: 方向2 靶点微调训练数据
 
 [✅] 原始 JSON 数据(保留备份):
-     D:\MMModel\配体数据\A2A_活性分子_合并.json (300条记录)
-     D:\MMModel\配体数据\B2AR_活性分子_1uM.json + _p2.json
-     D:\MMModel\配体数据\D3_活性分子_1uM.json
-     D:\MMModel\配体数据\5HT2B_活性分子_1uM.json
+     data/ligands/A2A_活性分子_合并.json (300条记录)
+     data/ligands/B2AR_活性分子_1uM.json + _p2.json
+     data/ligands/D3_活性分子_1uM.json
+     data/ligands/5HT2B_活性分子_1uM.json
 
 
 ================================================================================
 六、已知药物库 (✅ 已有样本,⏳ 需扩充)
 ================================================================================
-[✅] D:\MMModel\已知药物库\ChEMBL_已知药物_100.csv
+[✅] data/known_drugs/ChEMBL_已知药物_100.csv
      ChEMBL 已上市药物样本 (100个, 含SMILES)
      用途: 新颖性评估的比对基准(生成分子需与已知药物结构差异大)
      状态: 已下载样本

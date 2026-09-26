@@ -1,6 +1,12 @@
 # import sys
 # sys.path.append('.')
 import os
+import sys
+
+# 核心代码位于 src/ 下(models / utils / scripts), 需先让 src/ 可导入
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
+from paths import ROOT, SRC, CONFIGS, LOGS, ensure_dir  # noqa: E402
+
 import shutil
 import argparse
 from tqdm.auto import tqdm
@@ -18,10 +24,11 @@ from utils.misc import *
 from utils.train import *
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', type=str, default='./configs/train.yml')
+    parser = argparse.ArgumentParser(
+        description='一键训练/微调 Pocket2Mol 掩码填充模型')
+    parser.add_argument('--config', type=str, default=os.path.join(CONFIGS, 'train.yml'))
     parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--logdir', type=str, default='./logs')
+    parser.add_argument('--logdir', type=str, default=LOGS)
     args = parser.parse_args()
 
     # Load configs
@@ -32,6 +39,7 @@ if __name__ == '__main__':
         from apex import amp
 
     # Logging
+    ensure_dir(args.logdir)
     log_dir = get_new_log_dir(args.logdir, prefix=config_name)
     ckpt_dir = os.path.join(log_dir, 'checkpoints')
     os.makedirs(ckpt_dir, exist_ok=True)
@@ -40,7 +48,8 @@ if __name__ == '__main__':
     logger.info(args)
     logger.info(config)
     shutil.copyfile(args.config, os.path.join(log_dir, os.path.basename(args.config)))
-    shutil.copytree('./models', os.path.join(log_dir, 'models'))
+    # 归档的是模型架构代码(src/models), 不是 models/ 下的权重文件
+    shutil.copytree(os.path.join(SRC, 'models'), os.path.join(log_dir, 'models'))
 
     # Transforms
     protein_featurizer = FeaturizeProteinAtom()

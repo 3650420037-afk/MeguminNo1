@@ -1,30 +1,56 @@
-# Pocket2Mol 竞赛项目 — 实际运行环境依赖 (Windows, 实测 2026-09)
-#
-# 重要: 仓库根的 env_cuda113.yml 是**原版 Pocket2Mol 的 Linux 环境文件**
-#       (python 3.8 / pytorch 1.10.1+cu113 / rdkit 2022.03), 与本项目实际环境不一致,
-#       仅供溯源参考, 请勿用它复现环境。
-#
-# torch 需按本机 CUDA 版本单独安装 (2.6.0 对应 cu124):
-#   pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
-#
-# 环境自检: python docs/pocket2mol_demo.ipynb 或
-#           python scripts/verify_hardening.py
+# ==========================================================================
+# 7-eonmol · 运行环境依赖 (已在 Windows 实测; Linux 同理)
+# 安装:  pip install -r requirements.txt
+# 版本为 2026-09 实测环境的锁定版本, 便于评测方复现。
+# 完整环境信息(Python/OS/CUDA/驱动/硬件)见 README「三、环境与依赖」。
+# ==========================================================================
 
+# ---- 深度学习框架 (torch 需按本机 CUDA 版本单独安装, 见下方说明) ----
 torch==2.6.0
 torch-geometric==2.8.0
-torch-scatter
-torch-cluster
-rdkit
-biopython
-lmdb
-easydict
-PyYAML
-tqdm
-tensorboard
-numpy
-python-pptx        # docs/make_ppt.py (竞赛 PPT 生成器) 需要
+torch-scatter==2.1.2
+torch-cluster==1.6.3
+torch-sparse==0.6.18
 
-# 说明:
-# - 本工程含 Windows/PyTorch 2.6 兼容补丁 (utils/misc.py, utils/transforms.py,
-#   models/common.py), 请勿降级 torch 到 2.6 以下或删除补丁。
-# - GPU: 需 NVIDIA 显卡与驱动 (实测 RTX 4070 Laptop 8GB)。
+# ---- 化学信息学 ----
+rdkit==2026.3.5
+biopython==1.88
+
+# ---- 数据与数值 ----
+numpy==2.2.6
+scipy==1.15.3
+lmdb==2.3.0
+networkx==3.4.2
+
+# ---- 配置与工具 ----
+easydict==1.13
+PyYAML==6.0.3
+tqdm==4.70.0
+tensorboard==2.21.0
+
+# ---- 报告/表格生成 ----
+python-pptx==1.0.2
+
+# ==========================================================================
+# 安装说明
+# --------------------------------------------------------------------------
+# 1) torch 与三个 PyG 扩展必须与 CUDA 版本匹配。本环境为 CUDA 12.4:
+#      pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu124
+#      pip install torch-scatter==2.1.2 torch-cluster==1.6.3 torch-sparse==0.6.18 \
+#          -f https://data.pyg.org/whl/torch-2.6.0+cu124.html
+#    其他 CUDA 版本请到 https://pytorch.org 与 https://data.pyg.org/whl/ 选对应轮子。
+#
+# 2) 纯 CPU 也能运行(推理明显更慢): 命令行加 --device cpu。
+#
+# 3) 本工程含 Windows / PyTorch 2.6 兼容补丁(src/utils/misc.py、src/utils/transforms.py、
+#    src/models/common.py), 请勿降级 torch 到 2.6 以下, 也不要删除这些补丁。
+#
+# 4) 分子对接(可选)需要第三方可执行文件, 不通过 pip 安装:
+#      tools/vina/vina.exe                      AutoDock Vina
+#      tools/openbabel/Library/bin/obabel.exe   Open Babel
+#    缺失时 predict.py 仍可完成生成与筛选, 只是清单中不含对接分数。
+#
+# 5) 仓库根的 env_cuda113.yml 是**原版 Pocket2Mol 的 Linux 环境文件**
+#    (python 3.8 / pytorch 1.10.1+cu113 / rdkit 2022.03), 与本项目实测环境不一致,
+#    仅供溯源参考, 请勿用它复现环境。
+# ==========================================================================

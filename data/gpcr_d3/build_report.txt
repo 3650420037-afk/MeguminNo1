@@ -1,0 +1,11 @@
+source_csv=D:\MMModel\配体数据\D3_活性配体.csv
+source_pdb=D:\MMModel\靶点结构\3PBL_D3多巴胺受体.pdb
+total_smiles=99
+valid_pairs=95
+skipped=4
+train=76
+val=19
+skipped_14=unsupported atomic numbers: [35]
+skipped_38=unsupported atomic numbers: [35]
+skipped_56=unsupported atomic numbers: [35]
+skipped_95=unsupported atomic numbers: [35]

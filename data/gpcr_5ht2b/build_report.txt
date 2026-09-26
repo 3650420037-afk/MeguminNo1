@@ -1,0 +1,15 @@
+source_csv=D:\MMModel\配体数据\5HT2B_活性配体.csv
+source_pdb=D:\MMModel\靶点结构\4IB4_5HT2B受体.pdb
+total_smiles=81
+valid_pairs=73
+skipped=8
+train=58
+val=15
+skipped_5=unsupported atomic numbers: [35]
+skipped_17=unsupported atomic numbers: [35]
+skipped_28=unsupported atomic numbers: [35]
+skipped_29=unsupported atomic numbers: [53]
+skipped_46=unsupported atomic numbers: [35]
+skipped_48=unsupported atomic numbers: [53]
+skipped_50=unsupported atomic numbers: [35]
+skipped_75=unsupported atomic numbers: [53]

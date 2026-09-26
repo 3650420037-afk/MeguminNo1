@@ -1,7 +1,7 @@
 ﻿# Pocket2Mol-GPCR 项目技术全书
 
 > 版本 1.0 · 2026-09-22 · 面向团队成员、答辩评审与后续接手者
-> 仓库：`D:\MMModel\Pocket2Mol`（git 远端 `3650420037-afk/MeguminNo1`，73 次提交）
+> 仓库：``（git 远端 `3650420037-afk/MeguminNo1`，73 次提交）
 > 本文所有数字均由仓库内脚本对实际产物统计得出，可逐文件追溯。
 
 ---
@@ -545,7 +545,7 @@ with 3D SDF (pdbqt_ready)                   45
 
 ## 第 6 章 评估与筛选体系
 
-> 11 项脚本化评估，全部产物落盘于 `D:\MMModel\化合物库\`。核心思路：
+> 11 项脚本化评估，全部产物落盘于 `results/`。核心思路：
 > **计算层面的"好"必须能被多个相互独立的证据链交叉验证**。
 
 ### 6.1 分子对接（Vina）
@@ -554,7 +554,7 @@ with 3D SDF (pdbqt_ready)                   45
 
 | 项 | 设置 |
 |---|---|
-| 引擎 | AutoDock Vina 1.2.5 + Open Babel 3.2.1（便携部署于 `D:\MMModel\tools\`） |
+| 引擎 | AutoDock Vina 1.2.5 + Open Babel 3.2.1（便携部署于 `tools/`） |
 | 口袋盒 | 22.5 Å 立方，中心由靶点给定 |
 | 受体准备 | 自动去水、去共晶配体、加氢、转 PDBQT |
 | 配体准备 | SMILES → 3D（ETKDG）→ 加氢 → PDBQT |
@@ -1001,33 +1001,33 @@ sample:
 
 ```powershell
 # 1) 生成（A2A，正式参数）
-D:\Miniconda3\envs\Pocket2Mol\python.exe sample_for_pdb.py `
-  --pdb_path "D:\MMModel\靶点结构\4EIY_A2A受体.pdb" --center " -0.4,8.5,17.1" `
+python sample_for_pdb.py `
+  --pdb_path "data/targets/4EIY_A2A受体.pdb" --center " -0.4,8.5,17.1" `
   --config configs\sample_for_pdb_guided_l3.yml --outdir outputs\my_run
 
 # 2) 过滤入库
-D:\Miniconda3\envs\Pocket2Mol\python.exe scripts\build_library.py `
+python scripts\build_library.py `
   --runs outputs\my_run --library outputs\my_run\library
 
 # 3) 对接
-D:\Miniconda3\envs\Pocket2Mol\python.exe scripts\docking_pipeline.py `
-  --receptor "D:\MMModel\靶点结构\4EIY_A2A受体.pdb" --center= -0.4,8.5,17.1 `
+python scripts\docking_pipeline.py `
+  --receptor "data/targets/4EIY_A2A受体.pdb" --center= -0.4,8.5,17.1 `
   --smiles-file library_smiles.txt --out outputs\docking_my
 
 # 4) 全链路自检（8 阶段）
-D:\Miniconda3\envs\Pocket2Mol\python.exe scripts\e2e_full_run.py
+python scripts\e2e_full_run.py
 
 # 5) 修复回归验证（36 项）
-D:\Miniconda3\envs\Pocket2Mol\python.exe scripts\verify_all_fixes.py
+python scripts\verify_all_fixes.py
 
 # 6) GUI
-D:\Miniconda3\envs\Pocket2Mol\python.exe gui\app_pro.py            # 源码运行
+python gui\app_pro.py            # 源码运行
 gui\dist\7-eonmol.exe                                        # 打包版
 ```
 
 ### 12.4 结果文件对照
 
-| 文件（`D:\MMModel\化合物库\`） | 内容 | 行数 |
+| 文件（`results/`） | 内容 | 行数 |
 |---|---|---|
 | `compounds_tagged.csv` | 全库分子 + 全部理化指标 + 靶点标签 | 2,931 |
 | `compounds.csv` / `library.db` | 主库与结构化索引 | 2,931 |

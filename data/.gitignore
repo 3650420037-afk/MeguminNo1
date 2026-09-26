@@ -1,6 +1,19 @@
-*
-!*.md
-!test_list.tsv
-!/crossdocked_pocket10
-!/crossdocked_pocket10/*.md
-!.gitignore
+# ==========================================================================
+# data/ 提交细则
+# 本目录提交: 数据说明、来源与许可、划分记录(index.pkl / split_by_name.pt)、
+#             示例与参考数据(targets / example / ligands / druglib / known_drugs)、
+#             活性配体原始拉取(ligand_data, 用于溯源)
+# 本目录不提交: GB 级 LMDB 训练张量与原始结构下载(见 README 的获取方式)
+# 说明: 采用黑名单而非 "*" 白名单, 避免新增参考数据目录被静默忽略
+# ==========================================================================
+
+*.lmdb
+*.lmdb-lock
+crossdocked_pocket10/
+gpcr_v3/
+gpcr_v3_clean/
+gpcr_v3_merged/
+gpcr_pdb_raw/
+_pdb_cache/
+raw/
+downloads/

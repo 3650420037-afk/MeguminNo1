@@ -1,0 +1,1 @@
+merged=479 train=383 val=96 output=D:\MMModel\Pocket2Mol\data\gpcr_multitarget_v2

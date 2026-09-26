@@ -1,4 +1,4 @@
-﻿model:
+model:
   vn: vn
   hidden_channels: 256
   hidden_channels_vec: 64
@@ -27,7 +27,7 @@
 train:
   seed: 2021
   use_apex: false
-  init_checkpoint: ./ckpt/pretrained_Pocket2Mol.pt
+  init_checkpoint: models/pretrained_Pocket2Mol.pt
   batch_size: 1
   num_workers: 0
   pin_memory: false

@@ -1,0 +1,4 @@
+sources=[('gpcr_a2a', 136), ('gpcr_b2ar', 179), ('gpcr_d3', 91), ('gpcr_5ht2b', 73)]
+total=479
+train=383
+val=96

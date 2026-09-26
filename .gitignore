@@ -1,35 +1,39 @@
-﻿# ========== 大文件:走 GitHub Releases,不进 git 历史 ==========
-# 预训练权重(44.9MB)与微调权重 —— 放 Releases 分发,避免仓库臃肿
-ckpt/*.pt
+# ==========================================================================
+# 7-eonmol 提交仓库 .gitignore
+# 原则: 只提交可复现所需的源代码/配置/文档/小体积参考数据与最终结果;
+#       大数据集、历史运行产物、备份、第三方二进制一律本地保留。
+# ==========================================================================
 
-# 数据集(GB 级,每台机器自行下载)
-data/*
-!data/README.md
-!data/test_list.tsv
+# ---------- 非提交内容: 历史产物/备份/原始下载, 见 other/README.md ----------
+other/
 
-# ========== 运行产物:每台机器自己生成 ==========
-# 采样输出(分子结果,合并时用压缩包/Release 传)
+# ---------- 第三方二进制工具 (AutoDock Vina / Open Babel), 见 README 环境说明 ----------
+tools/
+
+# ---------- 大数据集: GB 级 LMDB 等, 每台机器自行构建, 细则见 data/.gitignore ----------
+data/*.lmdb
+data/*.lmdb-lock
+
+# ---------- 运行产物 ----------
 outputs/*
 !outputs/.gitkeep
-
-# 训练/采样日志
 logs/*
 tmp/*
 
-# ========== Python 缓存与编译文件 ==========
+# ---------- Python 缓存与编译文件 ----------
 __pycache__/
 *.py[cod]
 *.egg-info/
 .ipynb_checkpoints/
 .history/*
 
-# ========== 编辑器/系统文件 ==========
+# ---------- 编辑器/系统文件 ----------
 .vscode/*
 .idea/
 .DS_Store
 Thumbs.db
-# ========== GUI 构建产物:不进 git(体积大且可重现) ==========
-# PyInstaller 中间产物与打包输出; 分发用 Release 或部署包
-gui/build/
-gui/dist/
-gui/*.spec
+
+# ---------- GUI 构建产物 (PyInstaller, 体积大且可重现) ----------
+src/gui/build/
+src/gui/dist/
+src/gui/*.spec

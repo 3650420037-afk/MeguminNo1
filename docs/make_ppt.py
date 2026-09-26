@@ -1,5 +1,18 @@
 # -*- coding: utf-8 -*-
-"""Pocket2Mol 竞赛项目展示 PPT 生成器 — 科幻深空风, 40 页, 16:9"""
+"""Pocket2Mol 竞赛项目展示 PPT 生成器 — 科幻深空风, 40 页, 16:9
+
+用法:
+    python docs/make_ppt.py [输出文件.pptx]
+    不带参数时输出到 docs/ 下 (原实现写死在个人桌面上, 已改为参数/默认目录)。
+"""
+import os
+import sys
+
+# ---- 路径前置: docs/make_ppt.py -> 仓库根 -> 仓库根/src (统一从 paths.py 取路径) ----
+sys.path.insert(0, os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "src"))
+from paths import RESULTS, DOCS  # noqa: E402
+
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
 from pptx.dml.color import RGBColor
@@ -655,10 +668,10 @@ content("风险与应对（答辩预备）", "Risks & Mitigations", [
 content("交付物与开源索引", "Deliverables Index", [
     ("t", [
         ["类别", "内容", "位置"],
-        ["化合物库", "2,931 + 917/951/1,065（SQLite/CSV/SDF）", "D:\\MMModel\\化合物库"],
+        ["化合物库", "2,931 + 917/951/1,065（SQLite/CSV/SDF）", RESULTS],
         ["候选清单", "四靶点 Top50 + 新颖性判级", "top_candidates.csv / top50_novelty.csv"],
-        ["引擎代码", "引导束搜索 + 全管线脚本（GitHub 开源）", "仓库 scripts/ + utils/guidance.py"],
-        ["桌面应用", "三步式 GUI（双击即用 exe）", "gui/dist/ + 桌面快捷方式"],
+        ["引擎代码", "引导束搜索 + 全管线脚本（GitHub 开源）", "仓库 src/scripts/ + src/utils/guidance.py"],
+        ["桌面应用", "三步式 GUI（双击即用 exe）", "src/gui/dist/ + 桌面快捷方式"],
         ["文档", "README + notebook + 摘要/评审表/声明", "docs/ + 竞赛材料\\"],
     ], [2.4, 5.6, 4.2], PURPLE),
 ], tag="附·索引")
@@ -672,7 +685,7 @@ content("附录：四靶点成果总表", "Appendix", [
         ["5-HT2B", "1,525", "1,065", "-9.34", "-12.34", "24.9%", "50/50"],
         ["合计", "10,004", "6,864", "—", "-13.97", "—", "198/200"],
     ], [2.0, 1.7, 1.7, 1.9, 1.8, 1.7, 1.9], GREEN),
-    ("note", "全部数据可在仓库 outputs/、化合物库/ 中逐文件追溯；本页所有数字由脚本自动统计生成。", 0.6),
+    ("note", "全部数据可在仓库 outputs/、results/ 中逐文件追溯；本页所有数字由脚本自动统计生成。", 0.6),
 ], tag="附·总表")
 
 # ================= 40 结尾 =================
@@ -689,6 +702,6 @@ box(s, 4.42, 5.95, 4.5, 0.03, fill=PURPLE)
 text(s, 0.5, 6.15, 12.33, 0.5, [("全球大学生生命科学挑战赛 · 赛道3 · 子任务2", 12, GREY, False)], align=PP_ALIGN.CENTER)
 deco(s)
 
-out = r"C:\Users\31908\Desktop\Pocket2Mol_项目展示.pptx"
+out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(DOCS, "Pocket2Mol_项目展示.pptx")
 prs.save(out)
 print("pages:", N[0], "->", out)

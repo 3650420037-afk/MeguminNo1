@@ -1,0 +1,77 @@
+{
+ "A2A": {
+  "pdb": "data/targets/4EIY_A2A受体.pdb",
+  "ligand_comp": "ZMA",
+  "receptor": "CRYSTAL STRUCTURE OF THE CHIMERIC PROTEIN OF A2AAR-BRIL IN COMPLEX WITH ZM241385 AT 1.8A RESOLUTION",
+  "ligand_smiles": "Nc1nc(NCCc2ccc(O)cc2)nc2nc(-c3ccco3)nn12",
+  "center": [
+   -0.42,
+   8.53,
+   17.13
+  ],
+  "n_ligand_heavy": 25,
+  "n_smiles_heavy": 25,
+  "deposited_ligand_complete": true,
+  "source": "data/targets/4EIY_配体ZMA.cif"
+ },
+ "B2AR": {
+  "pdb": "data/targets/2RH1_β2肾上腺素受体.pdb",
+  "ligand_comp": "CAU",
+  "receptor": "HIGH RESOLUTION CRYSTAL STRUCTURE OF HUMAN B2-ADRENERGIC G PROTEIN- COUPLED RECEPTOR.",
+  "ligand_smiles": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12",
+  "center": [
+   -29.52,
+   9.23,
+   6.94
+  ],
+  "n_ligand_heavy": 22,
+  "n_smiles_heavy": 22,
+  "deposited_ligand_complete": true,
+  "source": "data/targets/2RH1_配体CAU.cif"
+ },
+ "D3": {
+  "pdb": "data/targets/3PBL_D3多巴胺受体.pdb",
+  "ligand_comp": "ETQ",
+  "receptor": "Structure of the human dopamine D3 receptor in complex with eticlopride",
+  "ligand_smiles": "CCc1cc(Cl)c(OC)c(C(=O)NCC2CCCN2CC)c1O",
+  "center": [
+   0.09,
+   -14.83,
+   10.43
+  ],
+  "n_ligand_heavy": 23,
+  "n_smiles_heavy": 23,
+  "deposited_ligand_complete": true,
+  "source": "data/targets/3PBL.cif"
+ },
+ "5HT2B": {
+  "pdb": "data/targets/4IB4_5HT2B受体.pdb",
+  "ligand_comp": "ERM",
+  "receptor": "Crystal structure of the chimeric protein of 5-HT2B-BRIL in complex with ergotamine",
+  "ligand_smiles": "CN1CC(C(=O)NC2(C)OC3(O)C4CCCN4C(=O)C(Cc4ccccc4)N3C2=O)C=C2c3cccc4[nH]cc(c34)CC21",
+  "center": [
+   22.45,
+   18.28,
+   11.73
+  ],
+  "n_ligand_heavy": 43,
+  "n_smiles_heavy": 43,
+  "deposited_ligand_complete": true,
+  "source": "data/targets/4IB4.cif"
+ },
+ "A1AR": {
+  "pdb": "data/targets/5UEN.pdb",
+  "ligand_comp": "DU1",
+  "receptor": "Crystal structure of the human adenosine A1 receptor A1AR-bRIL in complex with the covalent antagonist DU172 at 3.2A resolution",
+  "ligand_smiles": "CCCn1c(=O)c2[nH]c(C3CCCCC3)nc2n(CCCNC(=O)c2ccc(S(=O)(=O)F)cc2)c1=O",
+  "center": [
+   55.97,
+   58.9,
+   143.62
+  ],
+  "n_ligand_heavy": 35,
+  "n_smiles_heavy": 36,
+  "deposited_ligand_complete": false,
+  "source": "data/targets/5UEN.cif"
+ }
+}

@@ -1,5 +1,5 @@
 model:
-    checkpoint: ./ckpt/pretrained_Pocket2Mol.pt
+    checkpoint: models/pretrained_Pocket2Mol.pt
 
 sample:
   seed: 8229
