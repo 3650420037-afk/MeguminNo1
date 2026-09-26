@@ -1,5 +1,5 @@
 {
- "run_id": "A2A_20260926_114253",
+ "run_id": "A2A_20260926_221453",
  "target": "A2A",
  "track": "赛道 3 · 离子通道/GPCR 小分子药物虚拟筛选 · 子任务 2",
  "stage": "predict",
@@ -10,28 +10,28 @@
   "seed": 2024,
   "lam": 3.0,
   "diversity_w": 0.5,
-  "top": 100,
+  "top": 300,
   "skip_design": false
  },
  "inputs": {
   "design_runs": [],
-  "library_dir": "results",
-  "checkpoint": "models\\pretrained_Pocket2Mol.pt"
+  "library_dir": "outputs\\predict_v2\\A2A_20260926_215526\\library",
+  "checkpoint": "models\\7-eonmol_ft_gpcr_v2.pt"
  },
  "result": {
-  "library_molecules": 2931,
-  "listed_candidates": 100,
-  "structure_files": 100,
-  "results_csv": "results\\results.csv",
-  "ranking": "已有六维综合 Tier 优先(Tier1→Tier2→…), 组内按类药性综合分",
-  "enrichment": "admet_screen.csv(2931 行, 补 3 列); selectivity_full.csv(2931 行, 补 2 列); pose_consistency.csv(2908 行, 补 1 列); final_recommendation.csv(200 行, 补 2 列); top_candidates.csv(50 行, 补 1 列)",
+  "library_molecules": 521,
+  "listed_candidates": 300,
+  "structure_files": 300,
+  "results_csv": "outputs\\results_v2_final\\results.csv",
+  "ranking": "关键预测指标_对接分Vina 升序(越负结合越强), 缺失者置底; 同分按类药性综合分 = QED + (1 − SA/10)",
+  "enrichment": "top_candidates.csv(521 行, 补 1 列)",
   "novelty_reference": "参考集 737 分子"
  },
  "timing_sec": {
   "design": 0.0,
   "library": 0.0,
-  "scoring": 25.0,
-  "total": 28.9
+  "scoring": 6.6,
+  "total": 19.5
  },
  "env": {
   "python": "3.10.20",
@@ -41,8 +41,8 @@
   "platform": "Windows-10-10.0.26200-SP0"
  },
  "model": {
-  "name": "Pocket2Mol (等变图神经网络) + 口袋引导束搜索",
-  "version": "pretrained_Pocket2Mol.pt (ICML 2022 官方权重, 未微调)",
+  "name": "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)",
+  "version": "7-eonmol_ft_gpcr_v2.pt — 本项目自训, 经两轮 A/B(种子 2024/2025)晋级; 基线为 ICML 2022 官方权重",
   "code_version": "7-eonmol-competition-submission"
  }
 }

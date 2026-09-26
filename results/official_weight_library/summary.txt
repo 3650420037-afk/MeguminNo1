@@ -1,0 +1,131 @@
+script                  : D:\MMModel\Pocket2Mol\scripts\build_library.py
+rdkit                   : 2026.03.5
+runs                    : batch_1;batch_10;batch_100;batch_101;batch_102;batch_103;batch_104;batch_105;batch_106;batch_107;batch_108;batch_109;batch_110;batch_111;batch_112;batch_113;batch_2;batch_3;batch_4;batch_5;batch_51;batch_52;batch_53;batch_54;batch_55;batch_56;batch_57;batch_58;batch_59;batch_6;batch_60;batch_61;batch_62;batch_63;batch_64;batch_65;batch_66;batch_67;batch_68;batch_69;batch_7;batch_70;batch_71;batch_72;batch_73;batch_74;batch_75;batch_76;batch_77;batch_78;batch_79;batch_8;batch_80;batch_81;batch_82;batch_83;batch_84;batch_85;batch_86;batch_87;batch_88;batch_89;batch_9;batch_90;batch_91;batch_92;batch_93;batch_94;batch_95;batch_96;batch_97;batch_98;batch_99
+mode                    : rebuild
+filter                  : PAINS+BRENK, MW[250,500], LogP[1,5], QED>=0.4, SA<=6, elements=CNOFPSCl, rings>=1
+raw_lines               : 4231
+invalid_smiles          : 0
+unique_canonical        : 4183
+kept                    : 2931
+pdbqt_ready             : 2931
+elapsed_sec             : 89.6
+
+---- filter funnel ----
+  raw SMILES lines read                    4231
+  invalid/unparseable (dropped)               0
+  unique canonical SMILES (deduped)        4183
+  after PAINS                              3957  (-226, 94.6% of unique)
+  after BRENK                              3305  (-652, 79.0% of unique)
+  after MW in [250, 500]                   3167  (-138, 75.7% of unique)
+  after Crippen LogP in [1, 5]             2932  (-235, 70.1% of unique)
+  after QED >= 0.4                         2932  (-0, 70.1% of unique)
+  after SA score <= 6                      2932  (-0, 70.1% of unique)
+  after elements CNOFPSCl                  2932  (-0, 70.1% of unique)
+  after rings >= 1                         2931  (-1, 70.1% of unique)
+  final library compounds                  2931
+  with 3D SDF (pdbqt_ready)                2931
+
+---- library stats ----
+unique murcko scaffolds: 1960
+top scaffolds:
+  c1ccc2ccccc2c1                                               27
+  O=c1[nH]c2ccccc2c(=O)n1C1CCCCC1                              23
+  O=C(CCN1CCCCC1=O)Nc1cccc2ccccc12                             18
+  O=c1c2ccccc2cc2n1CCCC2                                       14
+  O=C1CCCCN1C1CCN(c2cc(=O)c3ccccc3[nH]2)C1                     14
+  O=C1CCCN1Cc1cn2c3c(cccc13)Cc1ccccc1C2=O                      13
+  c1ccc2ncccc2c1                                               12
+  O=C(Nc1cccc2ccccc12)N1CCN2C(=O)CCCCC2C1                      12
+  O=C(CCc1ccccc1)NCCC(=O)N1CCCCC1                              11
+  O=C1CCCCN1CCC(=O)n1ccc2ccccc21                               10
+  qed   : min=0.468  median=0.825  max=0.946  n=2931
+  sa    : min=1.518  median=3.329  max=5.947  n=2931
+  mw    : min=253.386  median=362.338  max=454.567  n=2931
+  logp  : min=1.001  median=2.932  max=5.000  n=2931
+---- QED distribution (n=2931) ----
+  0.0-0.1 |                                          0
+  0.1-0.2 |                                          0
+  0.2-0.3 |                                          0
+  0.3-0.4 |                                          0
+  0.4-0.5 |                                          7
+  0.5-0.6 | ##                                       56
+  0.6-0.7 | #######                                  238
+  0.7-0.8 | ########################                 860
+  0.8-0.9 | ######################################## 1460
+  0.9-1.0 | ########                                 310
+---- per run (raw lines / final kept+merged / rejected) ----
+  batch_1                                  raw=50     kept=35    rejected=15
+  batch_10                                 raw=61     kept=49    rejected=12
+  batch_100                                raw=52     kept=35    rejected=17
+  batch_101                                raw=60     kept=47    rejected=13
+  batch_102                                raw=55     kept=34    rejected=21
+  batch_103                                raw=65     kept=49    rejected=16
+  batch_104                                raw=69     kept=37    rejected=32
+  batch_105                                raw=64     kept=50    rejected=14
+  batch_106                                raw=54     kept=45    rejected=9
+  batch_107                                raw=64     kept=42    rejected=22
+  batch_108                                raw=65     kept=42    rejected=23
+  batch_109                                raw=55     kept=39    rejected=16
+  batch_110                                raw=64     kept=50    rejected=14
+  batch_111                                raw=64     kept=41    rejected=23
+  batch_112                                raw=54     kept=40    rejected=14
+  batch_113                                raw=59     kept=39    rejected=20
+  batch_2                                  raw=51     kept=37    rejected=14
+  batch_3                                  raw=52     kept=38    rejected=14
+  batch_4                                  raw=55     kept=38    rejected=17
+  batch_5                                  raw=57     kept=33    rejected=24
+  batch_51                                 raw=60     kept=47    rejected=13
+  batch_52                                 raw=51     kept=35    rejected=16
+  batch_53                                 raw=57     kept=41    rejected=16
+  batch_54                                 raw=59     kept=37    rejected=22
+  batch_55                                 raw=55     kept=47    rejected=8
+  batch_56                                 raw=54     kept=17    rejected=37
+  batch_57                                 raw=51     kept=43    rejected=8
+  batch_58                                 raw=58     kept=34    rejected=24
+  batch_59                                 raw=50     kept=37    rejected=13
+  batch_6                                  raw=64     kept=46    rejected=18
+  batch_60                                 raw=52     kept=36    rejected=16
+  batch_61                                 raw=56     kept=44    rejected=12
+  batch_62                                 raw=51     kept=40    rejected=11
+  batch_63                                 raw=56     kept=40    rejected=16
+  batch_64                                 raw=68     kept=48    rejected=20
+  batch_65                                 raw=55     kept=39    rejected=16
+  batch_66                                 raw=53     kept=33    rejected=20
+  batch_67                                 raw=57     kept=36    rejected=21
+  batch_68                                 raw=56     kept=42    rejected=14
+  batch_69                                 raw=51     kept=33    rejected=18
+  batch_7                                  raw=60     kept=46    rejected=14
+  batch_70                                 raw=66     kept=45    rejected=21
+  batch_71                                 raw=58     kept=42    rejected=16
+  batch_72                                 raw=55     kept=36    rejected=19
+  batch_73                                 raw=57     kept=41    rejected=16
+  batch_74                                 raw=58     kept=36    rejected=22
+  batch_75                                 raw=67     kept=46    rejected=21
+  batch_76                                 raw=51     kept=33    rejected=18
+  batch_77                                 raw=68     kept=50    rejected=18
+  batch_78                                 raw=53     kept=35    rejected=18
+  batch_79                                 raw=53     kept=43    rejected=10
+  batch_8                                  raw=58     kept=36    rejected=22
+  batch_80                                 raw=64     kept=49    rejected=15
+  batch_81                                 raw=50     kept=40    rejected=10
+  batch_82                                 raw=55     kept=36    rejected=19
+  batch_83                                 raw=67     kept=17    rejected=50
+  batch_84                                 raw=58     kept=33    rejected=25
+  batch_85                                 raw=61     kept=34    rejected=27
+  batch_86                                 raw=64     kept=48    rejected=16
+  batch_87                                 raw=62     kept=44    rejected=18
+  batch_88                                 raw=55     kept=44    rejected=11
+  batch_89                                 raw=65     kept=42    rejected=23
+  batch_9                                  raw=56     kept=51    rejected=5
+  batch_90                                 raw=61     kept=44    rejected=17
+  batch_91                                 raw=63     kept=39    rejected=24
+  batch_92                                 raw=57     kept=47    rejected=10
+  batch_93                                 raw=58     kept=35    rejected=23
+  batch_94                                 raw=55     kept=39    rejected=16
+  batch_95                                 raw=56     kept=43    rejected=13
+  batch_96                                 raw=71     kept=51    rejected=20
+  batch_97                                 raw=55     kept=32    rejected=23
+  batch_98                                 raw=55     kept=37    rejected=18
+  batch_99                                 raw=55     kept=42    rejected=13
+---- timing ----
+  read+normalize 2.5s | filter+props 32.4s | sdf 54.6s | total 89.6s

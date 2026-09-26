@@ -1,0 +1,48 @@
+{
+ "run_id": "A2A_20260926_114253",
+ "target": "A2A",
+ "track": "赛道 3 · 离子通道/GPCR 小分子药物虚拟筛选 · 子任务 2",
+ "stage": "predict",
+ "params": {
+  "num_samples": 50,
+  "beam_size": 100,
+  "max_steps": 50,
+  "seed": 2024,
+  "lam": 3.0,
+  "diversity_w": 0.5,
+  "top": 100,
+  "skip_design": false
+ },
+ "inputs": {
+  "design_runs": [],
+  "library_dir": "results",
+  "checkpoint": "models\\pretrained_Pocket2Mol.pt"
+ },
+ "result": {
+  "library_molecules": 2931,
+  "listed_candidates": 100,
+  "structure_files": 100,
+  "results_csv": "results\\results.csv",
+  "ranking": "已有六维综合 Tier 优先(Tier1→Tier2→…), 组内按类药性综合分",
+  "enrichment": "admet_screen.csv(2931 行, 补 3 列); selectivity_full.csv(2931 行, 补 2 列); pose_consistency.csv(2908 行, 补 1 列); final_recommendation.csv(200 行, 补 2 列); top_candidates.csv(50 行, 补 1 列)",
+  "novelty_reference": "参考集 737 分子"
+ },
+ "timing_sec": {
+  "design": 0.0,
+  "library": 0.0,
+  "scoring": 25.0,
+  "total": 28.9
+ },
+ "env": {
+  "python": "3.10.20",
+  "torch": "2.6.0+cu124",
+  "cuda": true,
+  "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "platform": "Windows-10-10.0.26200-SP0"
+ },
+ "model": {
+  "name": "Pocket2Mol (等变图神经网络) + 口袋引导束搜索",
+  "version": "pretrained_Pocket2Mol.pt (ICML 2022 官方权重, 未微调)",
+  "code_version": "7-eonmol-competition-submission"
+ }
+}
