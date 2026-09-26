@@ -31,8 +31,8 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
-from paths import (ROOT, CONFIGS, OUTPUTS, PRETRAINED, TARGETS, ensure_dir,  # noqa: E402
-                   missing_hint)
+from paths import (ROOT, CONFIGS, OUTPUTS, PRETRAINED, DEFAULT_CKPT, TARGETS,  # noqa: E402
+                   ensure_dir, missing_hint)
 
 DEFAULT_TEMPLATE = os.path.join(CONFIGS, "sample_for_pdb_guided_l3.yml")
 
@@ -70,7 +70,7 @@ def build_config(args, center, out_cfg):
     with open(args.config, encoding="utf-8-sig") as f:
         cfg = yaml.safe_load(f)
     cfg.setdefault("model", {})
-    cfg["model"]["checkpoint"] = args.ckpt or PRETRAINED
+    cfg["model"]["checkpoint"] = args.ckpt or DEFAULT_CKPT
     s = cfg.setdefault("sample", {})
     s["seed"] = args.seed
     s["num_samples"] = args.num_samples
@@ -110,9 +110,9 @@ def main():
                     help="是否对输出做构象精修(保持姿态)")
     ap.add_argument("--config", default=DEFAULT_TEMPLATE, help="采样配置模板")
     ap.add_argument("--ckpt", default=None,
-                    help="自定义模型权重路径; 默认用 models/pretrained_Pocket2Mol.pt。"
-                         "本项目自训权重可用 models/7-eonmol_ft_gpcr_v1.pt"
-                         "(特性与取舍见 ModelCard.md, 未作为默认)")
+                    help="自定义模型权重路径; 默认用本项目自训并通过两轮 A/B 晋级的 "
+                         "models/7-eonmol_ft_gpcr_v2.pt(不存在时回退官方权重)。"
+                         "想跑官方基线请显式传 models/pretrained_Pocket2Mol.pt")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()

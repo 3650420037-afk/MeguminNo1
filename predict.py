@@ -39,10 +39,11 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 from paths import (ROOT, CONFIGS, DATA, KNOWN_DRUGS, OUTPUTS, PRETRAINED,  # noqa: E402
-                   RESULTS, ensure_dir, missing_hint)
+                   DEFAULT_CKPT, RESULTS, ensure_dir, missing_hint)
 
-MODEL_NAME = "Pocket2Mol (等变图神经网络) + 口袋引导束搜索"
-MODEL_VERSION = "pretrained_Pocket2Mol.pt (ICML 2022 官方权重, 未微调)"
+MODEL_NAME = "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)"
+MODEL_VERSION = ("7-eonmol_ft_gpcr_v2.pt — 本项目自训, 经两轮 A/B(种子 2024/2025)晋级; "
+                 "基线为 ICML 2022 官方权重")
 CODE_VERSION = "7-eonmol-competition-submission"
 
 # 靶点 -> 已知活性分子参考集(用于新颖性评估); 缺失则该项留空
@@ -359,7 +360,7 @@ def main():
     ap.add_argument("--device", default="cuda")
     args = ap.parse_args()
 
-    miss = missing_hint([("预训练权重", PRETRAINED)])
+    miss = missing_hint([("模型权重", DEFAULT_CKPT)])
     if miss and not (args.skip_design or args.library):
         raise SystemExit("[predict] 缺少必需文件:\n" + miss +
                          "\n请按 README 的“模型权重”一节准备。")
@@ -447,7 +448,7 @@ def main():
                    "skip_design": bool(args.skip_design)},
         "inputs": {"design_runs": [os.path.relpath(d, ROOT) for d in run_dirs],
                    "library_dir": os.path.relpath(lib_dir, ROOT),
-                   "checkpoint": os.path.relpath(PRETRAINED, ROOT)},
+                   "checkpoint": os.path.relpath(DEFAULT_CKPT, ROOT)},
         "result": {"library_molecules": n_all, "listed_candidates": n_top,
                    "structure_files": n_struct,
                    "results_csv": os.path.relpath(csv_path, ROOT),

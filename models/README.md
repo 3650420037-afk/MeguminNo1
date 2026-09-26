@@ -6,34 +6,48 @@
 
 | 文件 | 说明 |
 |---|---|
-| `pretrained_Pocket2Mol.pt` | Pocket2Mol 官方预训练权重，**42.8 MB**，**默认交付权重** |
-| `7-eonmol_ft_gpcr_v1.pt` | **本项目自训权重**，19.9 MB，实验性附加权重（见下） |
+| `7-eonmol_ft_gpcr_v2.pt` | **默认模型**：本项目自训，经双种子 A/B 晋级（19.9 MB） |
+| `pretrained_Pocket2Mol.pt` | Pocket2Mol 官方预训练权重（42.8 MB），微调起点与基线 |
+| `7-eonmol_ft_gpcr_v1.pt` | 早期自训权重，未晋级，保留供对照（19.9 MB） |
 | `README.md` | 本文件 |
 | `.gitignore` | 权重例外规则（本目录的 `.pt` 需随仓库提交） |
 
-## 自训权重 `7-eonmol_ft_gpcr_v1.pt`
+## 默认模型 `7-eonmol_ft_gpcr_v2.pt`（已晋级）
 
-本项目用自建数据集微调得到的权重（`train.py --config configs/train_gpcr_ft_head.yml`，
-数据 `data/gpcr_ft_v3`，iter 3200，冻结编码器 + 只训头部）。**定位为实验性附加权重，
-不是默认**——它在两个轴上有实测优势，但在产量与 QED 上低于官方权重：
+本项目用**对接构建的高密度数据集**微调得到，`design.py` / `predict.py` 默认使用它。
 
-| 指标（靶点 A2A，60 样本/束宽 50/40 步/种子 2024） | 官方权重 | 本自训权重 |
-|---|---|---|
-| **口袋穿模率**（最近重原子距离 < 0.5 Å） | 0.0% | **0.0%** |
-| **最近距离中位** | 3.22 Å | **2.35 Å**（更贴近实验参考 2.5–3.3 Å） |
-| **SA 中位**（越低越易合成） | 3.83 | **2.72** |
-| QED 中位 | **0.744** | 0.682 |
-| 完成分子数 | **63** | 23 |
+- 训练：`train.py --config configs/train_gpcr_dock.yml`（冻结编码器 + lr 1e-4 +
+  梯度累积 8 + 按验证损失存 best.pt + 早停），最优 iter 3000
+- 数据：`data/gpcr_dock_v1`（307 对 / **4 个口袋** / 每口袋 40–127 样本 / 零穿模），
+  由 `src/scripts/build_docked_dataset.py` 用 AutoDock Vina 把 ChEMBL 活性集
+  对接进**实验口袋**得到
 
-`judge_promotion.py` 判定 **NOT_PROMOTED**（完成数与骨架数不达标）。完整归因见
-[`docs/微调实验_v3_报告.md`](../docs/微调实验_v3_报告.md)：根因是**每个口袋只有约 1 个训练样本**，
-导致 focal 头的"停止生长"策略不可学（采样日志 `Failed = 0` 证明是**不终止**而非化学无效）。
+### 晋级证据（`src/scripts/judge_promotion.py`，双种子）
+
+| 种子 | 权重 | 完成分子 | QED 均值 | SA 均值 | 骨架数 | 口袋穿模率 | 判定 |
+|---|---|---|---|---|---|---|---|
+| 2024 | 官方基线 | 63 | 0.7237 | 3.5386 | 45 | 0.0% | — |
+| 2024 | **本权重** | 61 | **0.7636** | **3.3479** | 41 | **0.0%** | **PROMOTED** |
+| 2025 | 官方基线 | 62 | 0.7658 | 3.2741 | 45 | 4.84% | — |
+| 2025 | **本权重** | **64** | 0.7370 | **3.0118** | 37 | **1.56%** | **PROMOTED** |
+
+**如实表述**：分子数与基线相当；QED 一个种子更高、另一个略低（在 0.05 容差内），
+不宣称 QED 全面胜出；**SA 与口袋叠合度在两个种子上都稳定占优**。
+完整过程（含 5 次失败与两次被否证的修复尝试）见
+[`docs/微调实验_v3_报告.md`](../docs/微调实验_v3_报告.md)。
 
 使用方式：
 
 ```bash
-python design.py --target A2A --ckpt models/7-eonmol_ft_gpcr_v1.pt
+python design.py --target A2A                       # 默认即本权重
+python design.py --target A2A --ckpt models/pretrained_Pocket2Mol.pt   # 跑官方基线对照
+python design.py --target A2A --ckpt models/7-eonmol_ft_gpcr_v1.pt     # 对照未晋级的 v1
 ```
+
+## 早期权重 `7-eonmol_ft_gpcr_v1.pt`（未晋级，保留对照）
+
+在实验坐标数据集（每口袋仅 1 条）上训练，穿模 0%、SA 2.72、接触距离 2.35 Å 三项更好，
+但完成分子数 23 vs 基线 63 不达标，判 NOT_PROMOTED。保留以便复现该结论。
 
 ## 权重来源与许可
 

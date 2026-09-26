@@ -1,0 +1,53 @@
+method=autodock_vina_docking_into_experimental_pockets
+total=307
+train=261
+val=46
+pockets=4 (5HT2B,A2A,B2AR,D3)
+per_pocket=[('5HT2B', 40), ('A2A', 127), ('B2AR', 72), ('D3', 68)]
+exhaustiveness=4
+mind_min=1.50
+split_by=pair_stratified_by_target (seed=2021, val_ratio=0.150)
+NOTE=验证集与训练集共享口袋: 评测靶点(A2A)本身在训练集中, 本划分度量的是对同一口袋生成新分子的能力(配体空间泛化), 不是跨靶点泛化
+drug_like=MW[250,600] LogP<=6.0 QED>=0.30 rings>=2
+pose_min_dist: n=307 median=2.742 p10=2.075 min=1.653
+skipped=233
+  skip A2A/p0_lig_008: element_[35]
+  skip A2A/p0_lig_010: element_[35]
+  skip A2A/p0_lig_011: element_[35]
+  skip A2A/p0_lig_012: element_[35]
+  skip A2A/p0_lig_013: element_[35]
+  skip A2A/p1_lig_008: element_[35]
+  skip A2A/p1_lig_009: element_[35]
+  skip A2A/p1_lig_010: element_[35]
+  skip A2A/p1_lig_011: element_[35]
+  skip A2A/p1_lig_012: qed_0.261
+  skip A2A/p1_lig_014: element_[35]
+  skip A2A/p1_lig_015: element_[35]
+  skip A2A/p1_lig_016: mw_240
+  skip A2A/p1_lig_018: element_[53]
+  skip A2A/p2_lig_004: qed_0.230
+  skip A2A/p2_lig_005: element_[35]
+  skip A2A/p2_lig_011: element_[35]
+  skip A2A/p2_lig_013: element_[35]
+  skip A2A/p2_lig_017: element_[53]
+  skip A2A/p2_lig_022: element_[35]
+  skip A2A/p2_lig_025: element_[35]
+  skip A2A/p3_lig_003: qed_0.272
+  skip A2A/p3_lig_005: element_[35]
+  skip A2A/p3_lig_006: element_[35]
+  skip A2A/p3_lig_007: element_[35]
+  skip A2A/p3_lig_009: element_[35]
+  skip A2A/p3_lig_011: element_[35]
+  skip A2A/p3_lig_012: element_[35]
+  skip A2A/p3_lig_015: mw_236
+  skip A2A/p3_lig_025: qed_0.272
+  skip A2A/p3_lig_026: mw_237
+  skip A2A/p4_lig_005: element_[35]
+  skip A2A/p4_lig_007: element_[35]
+  skip A2A/p4_lig_008: element_[35]
+  skip A2A/p4_lig_011: element_[35]
+  skip A2A/p4_lig_014: element_[35]
+  skip A2A/p4_lig_017: element_[53]
+  skip A2A/p4_lig_023: sanitize_fail
+  skip A2A/p4_lig_025: element_[53]
+  skip A2A/p5_lig_002: qed_0.247

@@ -24,7 +24,7 @@
 | 设计/生成入口 | `python design.py --target A2A` |
 | 训练入口 | `python train.py --config configs/train_multitarget_v2.yml` |
 | 可执行 Notebook | `notebooks/7-eonmol_流程演示.ipynb` |
-| 模型 | Pocket2Mol 官方预训练权重（**未微调**）+ 本项目引导束搜索；见 [`ModelCard.md`](./ModelCard.md) |
+| 模型 | **本项目自训权重 `models/7-eonmol_ft_gpcr_v2.pt`**（经双种子 A/B 晋级，默认使用）+ 引导束搜索；官方权重保留为基线与对照。见 [`ModelCard.md`](./ModelCard.md) |
 | 数据 | RCSB PDB（CC0）+ ChEMBL（CC BY-SA 3.0）；来源/许可/划分见 [`data/README.md`](./data/README.md) |
 | 许可 | Pocket2Mol 为 MIT；第三方归属见 [`NOTICE.md`](./NOTICE.md) |
 | 联系方式 | 2025158065@hrbmu.edu.cn |
@@ -91,7 +91,7 @@
 
 | 维度 | 结论 |
 |---|---|
-| 基础模型 | Pocket2Mol 官方预训练权重（42.8 MB）；等变消息传递网络（MPNN，6 层 / 256 标量通道 / 64 方向通道）+ MDN 位置头（3 分量） |
+| 基础模型 | **本项目自训的 GPCR 微调权重**（`models/7-eonmol_ft_gpcr_v2.pt`，19.9 MB，基于 Pocket2Mol 官方权重微调，经双种子 A/B 晋级）；结构为等变消息传递网络（MPNN，6 层 / 256 标量通道 / 64 方向通道）+ MDN 位置头（3 分量） |
 | **核心改进** | **引导束搜索**：束排序概率乘化学分数增益 `exp(λ·chem)`；λ=3 时 QED 中位 0.667 → 0.803（**+20%**），双随机种子复现 |
 | 伴随改进 | Tanimoto 多样性惩罚（MMR 式）、生成构象力场精修、入库漏斗、全自动对接与分析管线 |
 | 主库（A2A） | **2,931** 分子 / **1,960** 唯一 Murcko 骨架 / QED 中位 **0.825** / SA 中位 **3.33** / MW 中位 **362 Da** |
@@ -360,7 +360,7 @@ python train.py --config configs/train_multitarget_v2.yml --logdir logs/smoke
 | `姿态能量差(kcal/mol)` | 最优/次优构象能量差，越小姿态越可信 |
 | `Murcko骨架` / `同骨架候选数` | 骨架与生成稳健性提示 |
 | `排序` / `靶点` | 排序位次 / 靶点名 |
-| `模型名称` `模型版本` `代码版本` | 例如 Pocket2Mol 官方权重（未微调）+ 引导束搜索 |
+| `模型名称` `模型版本` `代码版本` | 例如 7-eonmol（Pocket2Mol + 引导束搜索，GPCR 微调版）+ 权重文件名 |
 | `随机种子` `运行编号` | 复现所需 |
 | `备注` | 自动标注：3D 构象未生成、与已知活性高度相似（Tanimoto≥0.8）、Lipinski 违反 >1、ADMET 分级 C、无对接分 |
 
@@ -486,7 +486,7 @@ python src/scripts/build_target_registry.py
 | 靶点结构 | `data/targets/` | 5 个 GPCR 受体坐标 + 共晶配体定义（RCSB PDB，CC0） |
 | 最小示例 | `data/example/` | `4yhj.pdb` + 参考配体 SDF |
 | 已知活性/诱饵参考集 | `data/known_drugs/` | 新颖性与富集评估用（ChEMBL，CC BY-SA） |
-| 模型权重 | `models/pretrained_Pocket2Mol.pt` | 官方预训练权重（MIT）；下载说明见 `models/README.md` |
+| 模型权重 | `models/7-eonmol_ft_gpcr_v2.pt`（本项目自训，默认）；`models/pretrained_Pocket2Mol.pt`（官方基线，MIT） | 说明与晋级证据见 `models/README.md` |
 | 模型卡 | `ModelCard.md` | 适用范围、输入输出、已知局限、创新贡献 |
 | 候选清单 | `results/results.csv` 等 | 见第 5 节 |
 | 全库化合物 | `results/compounds.csv`、`results/*.csv` | QED/SA/MW/骨架/对接/ADMET/Pareto/选择性/推荐 |
@@ -519,10 +519,12 @@ python src/scripts/build_target_registry.py
 
 ## 11. 局限与未采纳路线
 
-- **权重未针对本项目靶点微调**：两轮微调（冻结底层 + 微调头部，含验证集早停）**均未通过
-  A/B 对照**——类药性中位 基线 0.780 vs 微调 v1 0.542 vs v2 0.578；QED≥0.8 占比
-  基线 37.9% vs 1.1% vs 2.3%。按"不达标即如实记录并保留基线"的原则**整体回退**，
-  交付仍使用官方预训练权重。失败原因分析见 `docs/7-eonmol_技术全书.md` 与 `ModelCard.md`。
+- **权重已针对本项目靶点微调并晋级**：前 5 次微调尝试（含 2 次旧实验）均 NOT_PROMOTED，
+  根因最终定位为**「每个口袋约 1 个训练样本」破坏生长/终止回路**（采样日志 `Failed = 0`，
+  分子永不终止）。改用**把各靶点 ChEMBL 活性集对接进实验口袋**构建的密集数据集
+  （4 个口袋 × 40–127 样本、零穿模）后，模型在**种子 2024 与 2025 双轮 A/B 中均晋级**：
+  SA 与口袋叠合度稳定占优，QED 与分子数与基线相当（一种子更高、另一种子略低，在容差内）。
+  完整过程（含失败与两次被否证的修复）见 `docs/微调实验_v3_报告.md` 与 `ModelCard.md`。
 - **元素词表受限**：含 Br/I/Na 等词表外元素的分子无法处理（实测占候选集 4%–19%）。
 - **引导会牺牲多样性**：λ 越大 QED 越高但结构多样性下降，`w_div` 只能部分补偿。
 - **对接精度**：Vina 打分与真实亲和力相关性有限，故补充了 ROC 富集、姿态一致性、逆向对照三层交叉验证，

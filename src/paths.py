@@ -17,7 +17,7 @@ __all__ = [
     "ROOT", "SRC", "DATA", "MODELS", "CONFIGS", "RESULTS", "LOGS", "OUTPUTS",
     "DOCS", "TOOLS", "OTHER", "NOTEBOOKS",
     "TARGETS", "EXAMPLE", "LIGANDS", "KNOWN_DRUGS", "LIGAND_DATA", "DRUGLIB",
-    "PRETRAINED", "VINA", "OBABEL", "PYTHON",
+    "PRETRAINED", "VINA", "OBABEL", "PYTHON", "FINETUNED", "DEFAULT_CKPT",
     "src_on_path", "ensure_dir", "require", "missing_hint",
 ]
 
@@ -50,6 +50,10 @@ DRUGLIB = os.path.join(DATA, "druglib")
 
 # ---------------------------------------------------------------- 权重
 PRETRAINED = os.path.join(MODELS, "pretrained_Pocket2Mol.pt")
+# 本项目自训并通过 A/B 晋级的权重(见 docs/微调实验_v3_报告.md)
+# 存在时作为默认; 不存在则回退到官方权重, 保证任何时候都能跑
+FINETUNED = os.path.join(MODELS, "7-eonmol_ft_gpcr_v2.pt")
+DEFAULT_CKPT = FINETUNED if os.path.exists(FINETUNED) else PRETRAINED
 
 # ---------------------------------------------------------------- 外部程序
 # 默认取仓库内 tools/; 可用环境变量指向别处(例如系统安装的 vina)
