@@ -1,0 +1,87 @@
+script                  : D:\MMModel\Pocket2Mol\scripts\build_library.py
+rdkit                   : 2026.03.5
+runs                    : batch_1;batch_10;batch_11;batch_12;batch_13;batch_14;batch_15;batch_16;batch_17;batch_18;batch_19;batch_2;batch_20;batch_21;batch_22;batch_23;batch_24;batch_25;batch_26;batch_27;batch_28;batch_29;batch_3;batch_4;batch_5;batch_6;batch_7;batch_8;batch_9
+mode                    : rebuild
+filter                  : PAINS+BRENK, MW[250,500], LogP[1,5], QED>=0.4, SA<=6, elements=CNOFPSCl, rings>=1
+raw_lines               : 1571
+invalid_smiles          : 0
+unique_canonical        : 1563
+kept                    : 951
+pdbqt_ready             : 951
+elapsed_sec             : 21.0
+
+---- filter funnel ----
+  raw SMILES lines read                    1571
+  invalid/unparseable (dropped)               0
+  unique canonical SMILES (deduped)        1563
+  after PAINS                              1545  (-18, 98.8% of unique)
+  after BRENK                              1294  (-251, 82.8% of unique)
+  after MW in [250, 500]                   1052  (-242, 67.3% of unique)
+  after Crippen LogP in [1, 5]              955  (-97, 61.1% of unique)
+  after QED >= 0.4                          955  (-0, 61.1% of unique)
+  after SA score <= 6                       955  (-0, 61.1% of unique)
+  after elements CNOFPSCl                   955  (-0, 61.1% of unique)
+  after rings >= 1                          951  (-4, 60.8% of unique)
+  final library compounds                   951
+  with 3D SDF (pdbqt_ready)                 951
+
+---- library stats ----
+unique murcko scaffolds: 549
+top scaffolds:
+  c1ccccc1                                                     71
+  c1ccc(-c2ccccc2)cc1                                          17
+  c1ccc2c(c1)CCCO2                                             16
+  C1CCCCC1                                                     15
+  O=C(c1ccccc1)N1CCCCC1                                        13
+  c1ccc(Oc2ccccc2)cc1                                           9
+  C1CCNCC1                                                      8
+  c1ccc2c(c1)CCCC2                                              8
+  C1CCC2CCCCC2C1                                                7
+  c1ccc2c(c1)CCNC2                                              7
+  qed   : min=0.541  median=0.834  max=0.943  n=951
+  sa    : min=1.585  median=3.185  max=5.879  n=951
+  mw    : min=250.191  median=339.435  max=438.911  n=951
+  logp  : min=1.027  median=3.587  max=4.979  n=951
+---- QED distribution (n=951) ----
+  0.0-0.1 |                                          0
+  0.1-0.2 |                                          0
+  0.2-0.3 |                                          0
+  0.3-0.4 |                                          0
+  0.4-0.5 |                                          0
+  0.5-0.6 | #                                        7
+  0.6-0.7 | #####                                    64
+  0.7-0.8 | ####################                     256
+  0.8-0.9 | ######################################## 511
+  0.9-1.0 | #########                                113
+---- per run (raw lines / final kept+merged / rejected) ----
+  batch_1                                  raw=57     kept=42    rejected=15
+  batch_10                                 raw=52     kept=27    rejected=25
+  batch_11                                 raw=56     kept=40    rejected=16
+  batch_12                                 raw=55     kept=43    rejected=12
+  batch_13                                 raw=51     kept=35    rejected=16
+  batch_14                                 raw=53     kept=31    rejected=22
+  batch_15                                 raw=57     kept=39    rejected=18
+  batch_16                                 raw=57     kept=36    rejected=21
+  batch_17                                 raw=54     kept=26    rejected=28
+  batch_18                                 raw=60     kept=40    rejected=20
+  batch_19                                 raw=57     kept=33    rejected=24
+  batch_2                                  raw=50     kept=37    rejected=13
+  batch_20                                 raw=55     kept=34    rejected=21
+  batch_21                                 raw=52     kept=29    rejected=23
+  batch_22                                 raw=50     kept=30    rejected=20
+  batch_23                                 raw=55     kept=24    rejected=31
+  batch_24                                 raw=55     kept=34    rejected=21
+  batch_25                                 raw=58     kept=32    rejected=26
+  batch_26                                 raw=54     kept=39    rejected=15
+  batch_27                                 raw=51     kept=23    rejected=28
+  batch_28                                 raw=51     kept=22    rejected=29
+  batch_29                                 raw=56     kept=32    rejected=24
+  batch_3                                  raw=53     kept=25    rejected=28
+  batch_4                                  raw=52     kept=30    rejected=22
+  batch_5                                  raw=53     kept=35    rejected=18
+  batch_6                                  raw=54     kept=38    rejected=16
+  batch_7                                  raw=52     kept=39    rejected=13
+  batch_8                                  raw=53     kept=24    rejected=29
+  batch_9                                  raw=58     kept=34    rejected=24
+---- timing ----
+  read+normalize 0.5s | filter+props 7.2s | sdf 13.2s | total 21.0s
