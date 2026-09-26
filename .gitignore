@@ -21,7 +21,14 @@ data/*.lmdb-lock
 # ---------- 运行产物 ----------
 outputs/*
 !outputs/.gitkeep
-logs/*
+
+# logs/: 提交训练/验证文本日志与随机种子记录(附件5 第二节要求),
+#         但排除检查点权重与训练时的脚本归档副本(体积大且可由 src/ 重现)
+logs/**/*.pt
+logs/**/*.0
+logs/**/checkpoints/
+logs/**/models/
+
 tmp/*
 
 # ---------- Python 缓存与编译文件 ----------
