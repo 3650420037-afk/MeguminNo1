@@ -1,0 +1,48 @@
+{
+ "run_id": "B2AR_20260927_002520",
+ "target": "B2AR",
+ "track": "赛道 3 · 离子通道/GPCR 小分子药物虚拟筛选 · 子任务 2",
+ "stage": "predict",
+ "params": {
+  "num_samples": 50,
+  "beam_size": 100,
+  "max_steps": 50,
+  "seed": 2024,
+  "lam": 3.0,
+  "diversity_w": 0.5,
+  "top": 300,
+  "skip_design": false
+ },
+ "inputs": {
+  "design_runs": [],
+  "library_dir": "outputs\\predict_b2ar2\\B2AR_20260927_000530\\library",
+  "checkpoint": "models\\7-eonmol_ft_gpcr_v2.pt"
+ },
+ "result": {
+  "library_molecules": 275,
+  "listed_candidates": 275,
+  "structure_files": 275,
+  "results_csv": "outputs\\results_b2ar_final\\results.csv",
+  "ranking": "关键预测指标_对接分Vina 升序(越负结合越强), 缺失者置底; 同分按类药性综合分 = QED + (1 − SA/10)",
+  "enrichment": "admet_screen.csv(275 行, 补 3 列); top_candidates.csv(275 行, 补 1 列)",
+  "novelty_reference": "参考集 596 分子"
+ },
+ "timing_sec": {
+  "design": 0.0,
+  "library": 0.0,
+  "scoring": 1.4,
+  "total": 8.0
+ },
+ "env": {
+  "python": "3.10.20",
+  "torch": "2.6.0+cu124",
+  "cuda": true,
+  "gpu": "NVIDIA GeForce RTX 4070 Laptop GPU",
+  "platform": "Windows-10-10.0.26200-SP0"
+ },
+ "model": {
+  "name": "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)",
+  "version": "7-eonmol_ft_gpcr_v2.pt — 本项目自训, 经两轮 A/B(种子 2024/2025)晋级; 基线为 ICML 2022 官方权重",
+  "code_version": "7-eonmol-competition-submission"
+ }
+}
