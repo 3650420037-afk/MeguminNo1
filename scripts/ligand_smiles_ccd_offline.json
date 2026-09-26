@@ -1,0 +1,7 @@
+{
+ "ETQ": "CCc1cc(Cl)c(OC)c(C(=O)NCC2CCCN2CC)c1O",
+ "ERM": "CN1CC(C(=O)NC2(C)OC3(O)C4CCCN4C(=O)C(Cc4ccccc4)N3C2=O)C=C2c3cccc4[nH]cc(c34)CC21",
+ "DU1": "CCCn1c(=O)c2[nH]c(C3CCCCC3)nc2n(CCCNC(=O)c2ccc(S(=O)(=O)F)cc2)c1=O",
+ "ZMA": "Nc1nc(NCCc2ccc(O)cc2)nc2nc(-c3ccco3)nn12",
+ "CAU": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12"
+}
