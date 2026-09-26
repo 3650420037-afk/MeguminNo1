@@ -1,0 +1,82 @@
+sources=rcsb_pfam_PF00001_human_ligand_bound
+total=157
+train=134
+val=23
+split_by=structure (seed=2021, val_ratio=0.150)
+train_structures=132
+val_structures=23
+structure_overlap=0
+expected_pairs_per_structure=1.01
+on_mismatch=skip
+drug_like=compact
+max_per_ligand=8
+curation: junk_ccd=293 druglike_reject=316 bad_element=24 duplicate_capped=17 unreadable=0
+unique_ligands: before=116 after=116
+ligand_source=experimental_coords(default)_or_generated_fallback
+experimental_pose=807
+fallback_generated=0
+composition_mismatch=24
+unusable_reasons=[('composition_mismatch', 24), ('template_fail', 1)]
+structures=157
+pocket_radius=12.0
+skipped=677
+  skip 3V2Y/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 5TGZ/ZDG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 5XR8/8D0: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6DO1/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6TOD/SOG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6WQA/CLR: too few pocket residues
+  skip 7EVY/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7PP1: cif parse: Chain id ('AAA') exceeds PDB format limit.
+  skip 7SRQ/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7TD4/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7T9I/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7T9N/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7VOE/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7UTZ/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7WC7/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7WC9/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7XW5/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7XW6/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8J6Q/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8J6P/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y02/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y01/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y73/CLR: ligand pose unusable: template_fail (已弃用, 不回退以免穿模)
+  skip 9B54/A1AIW: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9GE3/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9WNG/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9YDA/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip lig_10KT_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_23OI_A1E5L.sdf: 类药性: LogP 5.11 > 5.0
+  skip lig_23SO_A1E5L.sdf: 类药性: LogP 5.11 > 5.0
+  skip lig_23SO_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_2RH1_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_24XZ_UDP.sdf: 类药性: QED 0.269 < 0.45
+  skip lig_21TY_A1LYD.sdf: 类药性: MW 485 不在 [250,420]
+  skip lig_2YDV_SOG.sdf: 非类药配体(SOG: 脂类/去垢剂/辅酶)
+  skip lig_12JA_A1DB6.sdf: 类药性: MW 451 不在 [250,420]
+  skip lig_3D4S_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_22ES_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3NY9_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3NY8_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3V2Y_ML5.sdf: 类药性: QED 0.386 < 0.45
+  skip lig_3VW7_VPX.sdf: 类药性: MW 493 不在 [250,420]
+  skip lig_4EIY_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4DJH_JDC.sdf: 类药性: MW 466 不在 [250,420]
+  skip lig_3ODU_ITD.sdf: 类药性: LogP 5.37 > 5.0
+  skip lig_4IAQ_2GM.sdf: 类药性: MW 584 不在 [250,420]
+  skip lig_4IAR_ERM.sdf: 类药性: MW 582 不在 [250,420]
+  skip lig_4IB4_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4IB4_ERM.sdf: 类药性: MW 582 不在 [250,420]
+  skip lig_4NC3_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4NC3_ERM.sdf: 类药性: MW 582 不在 [250,420]
+  skip lig_4MBS_MRV.sdf: 类药性: MW 514 不在 [250,420]
+  skip lig_4NTJ_AZJ.sdf: 类药性: MW 471 不在 [250,420]
+  skip lig_4NTJ_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4PHU_2YB.sdf: 类药性: MW 525 不在 [250,420]
+  skip lig_4PXZ_6AD.sdf: 类药性: MW 473 不在 [250,420]
+  skip lig_4PXZ_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4S0V_SUV.sdf: 类药性: MW 451 不在 [250,420]
+  skip lig_4UHR_NGI.sdf: 类药性: MW 500 不在 [250,420]
+  skip lig_4UG2_NGI.sdf: 类药性: MW 500 不在 [250,420]

@@ -139,6 +139,20 @@ if __name__ == '__main__':
             for parameter in model.encoder.parameters():
                 parameter.requires_grad = False
             logger.info('Frozen encoder parameters for local fine-tuning.')
+        # 按参数名子串冻结任意模块(可叠加)。
+        # 用途: frontier_pred 决定"哪里还可生长/何时停止", 它的漂移会让分子永不终止
+        # (实测: 新数据微调后采样日志 Failed=0, 完成数 63 -> 23/7)。把编码器与
+        # frontier_pred 一并冻结, 可让"何时停"保持预训练解, 只让化学头适配新靶点。
+        freeze_pats = list(config.train.get('freeze_patterns', []) or [])
+        if freeze_pats:
+            n_frozen, names = 0, set()
+            for pname, parameter in model.named_parameters():
+                if any(pat in pname for pat in freeze_pats):
+                    parameter.requires_grad = False
+                    n_frozen += parameter.numel()
+                    names.add(pname.split('.')[0] + '.' + (pname.split('.')[1] if '.' in pname else ''))
+            logger.info('Frozen by patterns %s: %.2f M params (%s)'
+                        % (freeze_pats, n_frozen / 1e6, sorted(names)))
     print('Num of parameters is', np.sum([p.numel() for p in model.parameters()]))
 
     # Optimizer and scheduler

@@ -1,0 +1,105 @@
+# ==========================================================================
+# 微调配方 v5 —— 收紧训练配体的分子量窗口(对齐目标输出尺寸)
+#
+# 依据(同规模同种子 A/B 实测, 靶点 A2A, 60 样本/束宽 50/40 步/种子 2024):
+#   官方基线                 : 完成 63 | QED 中位 0.7445 | SA 3.8332 | 生成 MW 中位 401.5
+#   v3a(medium 数据, lr1e-4) : 完成 23 | QED 中位 0.6823 | SA 2.7165 | 生成 MW 中位 -
+#   v4 (再冻结 frontier_pred): 完成 30 | QED 中位 0.5801 | SA 4.6115 | 生成 MW 中位 496.6
+#
+# 新机制(实测): medium 档训练集 MW 中位 387.9 但 P90 达 489.5(44% >= 400), 微调把
+#   模型的尺寸先验推到了 MW 中位 496.6, 而官方权重生成的是 401.5。分子越大越耗步数,
+#   在同一步数预算下完成数越少, 且 QED 随分子变大而下降 —— 同时解释了产量与 QED 双降。
+#
+# 本配置: 训练配体改用 compact 档(MW 250-420, QED>=0.45), 把尺寸先验拉回目标区间。
+#   数据量随之从 262 降到 157 对(train 134 / val 23) —— 数据更少也意味着微调漂移更小。
+#
+# 其余同 v3a(实验坐标 / 冻结编码器 / grad_accum 8 / best.pt + 早停 / 训练前验收门)。
+# ==========================================================================
+
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/pretrained_Pocket2Mol.pt
+
+  # --- 修复点 2: 有效 batch = batch_size x grad_accum = 8 ---
+  batch_size: 1
+  grad_accum: 8
+  num_workers: 0
+  pin_memory: false
+
+  # --- 修复点 5: 给足迭代空间 ---
+  max_iters: 6000
+  val_freq: 200
+
+  # --- 修复点 3: 按验证损失存 best.pt + 早停 ---
+  early_stop_patience: 6        # 6 x val_freq(200) = 1200 步未改善即停
+  early_stop_min_iters: 1200    # 至少训到首个可能的谷底附近再允许早停
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  # --- 修复点 4: 冻结编码器, 只训头部, 用更大学习率 ---
+  freeze_encoder: true
+  optimizer:
+    type: adam
+    lr: 1.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3                 # 3 x val_freq(200) = 600 步未改善则降 lr
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      # 关键: 必须 >= 1。旧值 0 会让配体以 9.09% 概率被全部掩码,
+      # context 为空 -> loss_frontier = BCE(空,空) = NaN
+      min_num_unmasked: 1
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+# --- 修复点 1: 实验坐标重建的数据集(无穿模) ---
+dataset:
+  name: pl
+  path: ./data/gpcr_ft_v3c
+  split: ./data/gpcr_ft_v3c/split_by_name.pt

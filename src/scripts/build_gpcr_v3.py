@@ -157,6 +157,10 @@ DRUGLIKE_TIERS = {
     "loose": (200.0, 600.0, 6.5, 0.25, 2),
     "medium": (250.0, 600.0, 6.0, 0.30, 2),
     "strict": (250.0, 500.0, 5.0, 0.40, 1),
+    # compact: 收紧分子量窗口以对齐目标输出尺寸。实测 medium 档训练集的 MW 中位
+    # 387.9 但 P90 达 489.5(44% >=400), 微调后模型把尺寸先验推到了 MW 中位 496.6
+    # (官方权重生成的是 401.5) —— 大分子更耗步数、QED 更低, 同时拉低产量与 QED。
+    "compact": (250.0, 420.0, 5.0, 0.45, 2),
 }
 
 
@@ -379,10 +383,11 @@ def main():
     ap.add_argument("--split-by", choices=["structure", "pair"], default="structure",
                     help="划分单位: structure=按结构(PDB ID)划分(默认, 防同一口袋泄漏到验证集); "
                          "pair=按配体对随机划分(旧行为, 存在同口袋跨集泄漏)")
-    ap.add_argument("--drug-like", choices=["off", "loose", "medium", "strict"],
+    ap.add_argument("--drug-like", choices=["off", "loose", "medium", "strict", "compact"],
                     default="medium",
                     help="共晶配体的类药性过滤档位(默认 medium): 落在 RCSB GPCR 复合物里的"
-                         "配体有很大比例是胆固醇/去垢剂/辅酶, 不筛掉会教模型生成油腻分子")
+                         "配体有很大比例是胆固醇/去垢剂/辅酶, 不筛掉会教模型生成油腻分子。"
+                         "compact 进一步收紧分子量窗口以对齐目标输出尺寸")
     ap.add_argument("--max-per-ligand", type=int, default=8,
                     help="同一配体(按规范化 SMILES)最多保留多少个不同口袋的样本, "
                          "0 表示不限制。实测 CLR 253 个、TEP 77 个, 两个分子占 41%% 样本")
