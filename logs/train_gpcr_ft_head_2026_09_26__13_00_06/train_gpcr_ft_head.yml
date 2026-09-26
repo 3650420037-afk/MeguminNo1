@@ -1,0 +1,117 @@
+# ==========================================================================
+# 微调配方 v3 —— 针对两次微调失败的原因逐条修正
+# 详见 docs/7-eonmol_技术全书.md §4.4 与 ModelCard.md
+#
+# 相对旧配方(configs/train_multitarget_v2.yml)的改动与依据:
+#
+#  1. 数据换成实验坐标重建版(31.5% -> ~0% 粗穿模)
+#     旧微调数据集由 build_gpcr_dataset.py 用 "ETKDG 生成构象 + 只平移质心" 造,
+#     实测 200 样本中最近重原子距离中位 0.624 A、31.5% < 0.5 A(实验位姿 2.5-3.3 A)。
+#     监督信号在教模型"原子可以放在蛋白原子里面"。
+#
+#  2. grad_accum: 8 —— 放大有效 batch
+#     batch_size=1 时单样本梯度噪声极大: 实测训练损失前 200 步均值 2.368 /
+#     标准差 3.755, 末 200 步均值 1.139 / 标准差 3.287(标准差始终大于均值),
+#     全局极差 35.8(-5.01 ~ 30.78), 35% 的迭代为负。8 GB 显存下用累积取大 batch 信号。
+#
+#  3. early_stop_patience: 6 —— 不再"训过头"
+#     实测验证损失 iter 1200 触底 0.774 后一路回升到 2000 的 1.898(2.45 倍),
+#     而旧流程保存并使用的正是编号最大的 2000.pt。现在按验证损失存 best.pt 并早停。
+#
+#  4. freeze_encoder: true + lr 1.e-4 —— 只训头部
+#     千级样本不足以更新编码器。旧多靶点配方未冻结(检查点 42.9 MB = 全量权重+
+#     优化器状态), 属灾难性遗忘的典型配方; 冻结版检查点仅 19.9 MB 可佐证差异。
+#     只训头部时可用更大学习率。
+#
+#  5. max_iters: 6000 —— 给足空间, 由早停兜底(旧配方 2000 步即结束)
+#
+# 注意: model 段必须与官方权重结构完全一致, 否则 init_checkpoint 加载失败。
+# ==========================================================================
+
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/pretrained_Pocket2Mol.pt
+
+  # --- 修复点 2: 有效 batch = batch_size x grad_accum = 8 ---
+  batch_size: 1
+  grad_accum: 8
+  num_workers: 0
+  pin_memory: false
+
+  # --- 修复点 5: 给足迭代空间 ---
+  max_iters: 6000
+  val_freq: 200
+
+  # --- 修复点 3: 按验证损失存 best.pt + 早停 ---
+  early_stop_patience: 6        # 6 x val_freq(200) = 1200 步未改善即停
+  early_stop_min_iters: 1200    # 至少训到首个可能的谷底附近再允许早停
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  # --- 修复点 4: 冻结编码器, 只训头部, 用更大学习率 ---
+  freeze_encoder: true
+  optimizer:
+    type: adam
+    lr: 1.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3                 # 3 x val_freq(200) = 600 步未改善则降 lr
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      # 关键: 必须 >= 1。旧值 0 会让配体以 9.09% 概率被全部掩码,
+      # context 为空 -> loss_frontier = BCE(空,空) = NaN
+      min_num_unmasked: 1
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+# --- 修复点 1: 实验坐标重建的数据集(无穿模) ---
+dataset:
+  name: pl
+  path: ./data/gpcr_ft_v3
+  split: ./data/gpcr_ft_v3/split_by_name.pt

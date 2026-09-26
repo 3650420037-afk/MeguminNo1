@@ -1,5 +1,5 @@
 {
- "run_id": "A2A_20260926_112507",
+ "run_id": "A2A_20260926_114253",
  "target": "A2A",
  "track": "赛道 3 · 离子通道/GPCR 小分子药物虚拟筛选 · 子任务 2",
  "stage": "predict",
@@ -30,8 +30,8 @@
  "timing_sec": {
   "design": 0.0,
   "library": 0.0,
-  "scoring": 9.4,
-  "total": 11.9
+  "scoring": 25.0,
+  "total": 28.9
  },
  "env": {
   "python": "3.10.20",

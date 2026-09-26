@@ -9,6 +9,7 @@ from paths import ROOT, SRC, CONFIGS, LOGS, ensure_dir  # noqa: E402
 
 import shutil
 import argparse
+import json
 from tqdm.auto import tqdm
 import torch
 from torch.nn.utils import clip_grad_norm_
@@ -29,6 +30,8 @@ if __name__ == '__main__':
     parser.add_argument('--config', type=str, default=os.path.join(CONFIGS, 'train.yml'))
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--logdir', type=str, default=LOGS)
+    parser.add_argument('--verify-dataset', action='store_true',
+                        help='只做数据集验收: 逐样本执行 transform, 全部通过则退出 0')
     args = parser.parse_args()
 
     # Load configs
@@ -80,6 +83,30 @@ if __name__ == '__main__':
         transform = transform,
     )
     train_set, val_set = subsets['train'], subsets['test']
+
+    # 训练前验收门: 把整个数据集过一遍特征化/掩码/构图转换, 任一失败即拒绝开训。
+    # 动机: 实测过一次白跑 —— 数据集里有词表外元素的配体, transform 在 iter 43 才
+    # 抛 AssertionError('Unexpected elements.') 崩掉训练。数据问题应在开训前暴露。
+    if args.verify_dataset:
+        logger.info('[Verify] 逐样本执行 transform ...')
+        bad = []
+        for name, ds in (('train', train_set), ('val', val_set)):
+            for i in range(len(ds)):
+                try:
+                    ds[i]
+                except Exception as e:
+                    bad.append((name, i, '%s: %s' % (type(e).__name__, str(e)[:120])))
+        logger.info('[Verify] 完成: train=%d, val=%d, 失败=%d'
+                    % (len(train_set), len(val_set), len(bad)))
+        for b in bad[:20]:
+            logger.error('[Verify] 失败 %s[%d]: %s' % b)
+        if bad:
+            raise SystemExit('[Verify] 数据集未通过验收, 共 %d 个样本无法转换; 请先修复数据'
+                             '(例如建库时剔除词表外元素/异常几何)' % len(bad))
+        print('[Verify] 数据集全部 %d 个样本可正常转换' % (len(train_set) + len(val_set)),
+              flush=True)
+        raise SystemExit(0)
+
     follow_batch = []
     collate_exclude_keys = ['ligand_nbh_list']
     train_iterator = inf_iterator(DataLoader(
@@ -120,9 +147,15 @@ if __name__ == '__main__':
     if config.train.use_apex:
         model, optimizer = amp.initialize(model, optimizer, opt_level='O1')
 
+    # 梯度累积: 每 grad_accum 个微批才更新一次参数, 等效放大 batch。
+    # batch_size=1 时单样本梯度噪声极大(实测训练损失标准差 > 均值, 极差 35.8),
+    # 累积是在 8 GB 显存下取得大 batch 梯度信号的最稳做法。
+    grad_accum = max(1, int(config.train.get('grad_accum', 1)))
+
     def train(it):
         # model.train()  has been moved to the end of validation function
-        optimizer.zero_grad()
+        if (it - 1) % grad_accum == 0:
+            optimizer.zero_grad()
         batch = next(train_iterator).to(args.device)
 
         compose_noise = torch.randn_like(batch.compose_pos) * config.train.pos_noise_std
@@ -160,13 +193,20 @@ if __name__ == '__main__':
         if not all(torch.isfinite(value).all() for value in loss_components):
             logger.warning('[Train] Iter %d skipped non-finite loss batch.' % it)
             return
+        # 按累积步数缩放后再反传; 日志里仍记录未缩放的损失, 便于与既有曲线对比
+        scaled_loss_value = loss / grad_accum
         if config.train.use_apex:
-            with amp.scale_loss(loss, optimizer) as scaled_loss:
+            with amp.scale_loss(scaled_loss_value, optimizer) as scaled_loss:
                 scaled_loss.backward()
         else:
-            loss.backward()
-        orig_grad_norm = clip_grad_norm_(model.parameters(), config.train.max_grad_norm, error_if_nonfinite=True)  # 5% running time
-        optimizer.step()
+            scaled_loss_value.backward()
+
+        do_step = (it % grad_accum == 0) or (it == config.train.max_iters)
+        if do_step:
+            orig_grad_norm = clip_grad_norm_(model.parameters(), config.train.max_grad_norm, error_if_nonfinite=True)  # 5% running time
+            optimizer.step()
+        else:
+            orig_grad_norm = float('nan')   # 累积中, 本步不更新
 
         logger.info('[Train] Iter %d | Loss %.6f | Loss(Fron) %.6f | Loss(Pos) %.6f | Loss(Cls) %.6f | Loss(Edge) %.6f | Loss(Real) %.6f | Loss(Fake) %.6f | Loss(Surf) %.6f  ' % (
             it, loss.item(), loss_frontier.item(), loss_pos.item(), loss_cls.item(), loss_edge.item(), loss_real.item(), loss_fake.item(), loss_surf.item()
@@ -242,6 +282,25 @@ if __name__ == '__main__':
         writer.flush()
         return avg_loss
 
+    # 按验证损失保留最优检查点 + 早停。
+    # 背景: 原实现丢弃 validate() 的返回值并无条件保存, 而下游 phase4_retrain.ps1
+    # 取"编号最大"的检查点, 于是用的正是最过拟合的那一个 —— 实测验证损失在
+    # iter 1200 触底 0.774 后回升到 2000 的 1.898(2.45 倍), 被选中的却是 2000.pt。
+    best_val = float('inf')
+    best_it = -1
+    bad_rounds = 0
+    patience = int(config.train.get('early_stop_patience', 0) or 0)   # 0 = 关闭早停
+    min_iters = int(config.train.get('early_stop_min_iters', 0) or 0)
+
+    def save_ckpt(path, it):
+        torch.save({
+            'config': config,
+            'model': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'scheduler': scheduler.state_dict(),
+            'iteration': it,
+        }, path)
+
     try:
         model.train()
         for it in range(1, config.train.max_iters+1):
@@ -250,15 +309,42 @@ if __name__ == '__main__':
             except RuntimeError as e:
                 logger.error('Runtime Error ' + str(e))
             if it % config.train.val_freq == 0 or it == config.train.max_iters:
-                validate(it)
+                avg_loss = validate(it)
+                val_total = float(np.asarray(avg_loss).reshape(-1)[0])
                 ckpt_path = os.path.join(ckpt_dir, '%d.pt' % it)
-                torch.save({
-                    'config': config,
-                    'model': model.state_dict(),
-                    'optimizer': optimizer.state_dict(),
-                    'scheduler': scheduler.state_dict(),
-                    'iteration': it,
-                }, ckpt_path)
+                save_ckpt(ckpt_path, it)
+                if val_total < best_val - 1e-6:
+                    best_val, best_it, bad_rounds = val_total, it, 0
+                    save_ckpt(os.path.join(ckpt_dir, 'best.pt'), it)
+                    logger.info('[Best] Iter %d | val_loss %.6f -> 更新 best.pt' % (it, val_total))
+                else:
+                    bad_rounds += 1
+                    logger.info('[Best] Iter %d | val_loss %.6f (最优 %.6f @ iter %d, 连续未改善 %d/%s)'
+                                % (it, val_total, best_val, best_it, bad_rounds,
+                                   patience if patience else '-'))
+                    if patience and it >= min_iters and bad_rounds >= patience:
+                        logger.info('[EarlyStop] 连续 %d 次未改善, 于 iter %d 停止; '
+                                    '最优 iter %d (val_loss %.6f), 权重见 %s'
+                                    % (bad_rounds, it, best_it, best_val,
+                                       os.path.join(ckpt_dir, 'best.pt')))
+                        break
+                # 供下游按验证损失挑选检查点(而不是按编号最大)
+                with open(os.path.join(ckpt_dir, 'best.json'), 'w', encoding='utf-8') as f:
+                    json.dump({'best_iter': best_it, 'best_val_loss': best_val,
+                               'last_iter': it, 'last_val_loss': val_total,
+                               'patience': patience, 'min_iters': min_iters,
+                               'select_metric': 'val_loss(avg_loss[0])',
+                               'note': '下游请使用 best.pt 或 iter=best_iter 的检查点'},
+                              f, ensure_ascii=False, indent=1)
+                # 逐次验证历史: 供 src/scripts/select_ckpt_by_generation.py 挑候选,
+                # 用"生成质量"而非"掩码补全损失"做最终选择(二者可反向, 见技术全书 §4.4)
+                with open(os.path.join(ckpt_dir, 'val_history.jsonl'), 'a', encoding='utf-8') as f:
+                    f.write(json.dumps({
+                        'iter': it,
+                        'val_total': val_total,
+                        'components': [float(x) for x in np.asarray(avg_loss).reshape(-1)],
+                        'is_best': bool(abs(val_total - best_val) < 1e-12),
+                    }, ensure_ascii=False) + '\n')
                 model.train()
     except KeyboardInterrupt:
         logger.info('Terminating...')

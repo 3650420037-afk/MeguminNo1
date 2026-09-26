@@ -70,7 +70,7 @@ def build_config(args, center, out_cfg):
     with open(args.config, encoding="utf-8-sig") as f:
         cfg = yaml.safe_load(f)
     cfg.setdefault("model", {})
-    cfg["model"]["checkpoint"] = PRETRAINED
+    cfg["model"]["checkpoint"] = args.ckpt or PRETRAINED
     s = cfg.setdefault("sample", {})
     s["seed"] = args.seed
     s["num_samples"] = args.num_samples
@@ -109,6 +109,10 @@ def main():
     ap.add_argument("--relax", type=int, default=0, choices=[0, 1],
                     help="是否对输出做构象精修(保持姿态)")
     ap.add_argument("--config", default=DEFAULT_TEMPLATE, help="采样配置模板")
+    ap.add_argument("--ckpt", default=None,
+                    help="自定义模型权重路径; 默认用 models/pretrained_Pocket2Mol.pt。"
+                         "本项目自训权重可用 models/7-eonmol_ft_gpcr_v1.pt"
+                         "(特性与取舍见 ModelCard.md, 未作为默认)")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()

@@ -136,6 +136,128 @@ def empty_stats():
             "unusable": {}, "mismatch_detail": []}
 
 
+# 常见非类药配体(脂类/去垢剂/辅料/辅酶/核苷酸): 它们在共晶结构里很常见,
+# 但不是药物分子, 用来训练会教模型生成胆固醇一类的油腻分子。
+JUNK_CCD = {
+    "CLR", "OLA", "OLB", "OLC", "PLM", "MYR", "STE", "LFA", "PC1", "Y01",
+    "SOG", "BOG", "LMT", "C8E", "PEG", "PGE", "PG4", "1PE", "MYS",
+    "FMN", "FAD", "NAD", "NAP", "GTP", "GDP", "GNP", "ATP", "ADP", "AMP", "ANP",
+    "SO4", "PO4", "GOL", "EDO", "ACT", "DMS", "IMD", "TRS", "MPD", "CIT", "EPE",
+    "NAG", "BMA", "MAN", "FUC", "GAL", "GLC", "NDG", "SIA", "XYP", "RIB",
+}
+
+# 模型元素词表(与 src/scripts/build_gpcr_dataset.py 一致): C N O F P S Cl。
+# 含词表外元素的配体必须在建库阶段剔除, 否则训练时 transforms 会
+# assert (cls_real.sum(-1) > 0).all() 失败 —— 实测曾在 iter 43 崩掉整次训练。
+SUPPORTED_ELEMENTS = {6, 7, 8, 9, 15, 16, 17}
+
+# 类药性过滤档位: (MW 下限, MW 上限, LogP 上限, QED 下限, 最少环数)
+DRUGLIKE_TIERS = {
+    "off": None,
+    "loose": (200.0, 600.0, 6.5, 0.25, 2),
+    "medium": (250.0, 600.0, 6.0, 0.30, 2),
+    "strict": (250.0, 500.0, 5.0, 0.40, 1),
+}
+
+
+def curate_entries(entries, outdir, tier, max_per_ligand, skipped):
+    """按类药性与冗余度筛选样本; 被淘汰的样本连同其文件一并移除。
+
+    动机(实测): 738 个 RCSB GPCR 复合物里, 共晶配体有 31.4% 是胆固醇(CLR),
+    另有去垢剂/辅酶/核苷酸等; CLR(253)+TEP(77) 两个分子就占了 41% 的样本。
+    直接用这种数据微调会把类药分子生成器推向油腻/单一化学空间。
+
+    返回 (kept_entries, stats)。stats 记录各淘汰原因计数。
+    """
+    from rdkit import Chem, RDLogger
+    from rdkit.Chem import QED, Descriptors, Crippen, rdMolDescriptors
+    RDLogger.DisableLog("rdApp.*")
+    stats = {"druglike_reject": 0, "junk_ccd": 0, "duplicate_capped": 0,
+             "unreadable": 0, "bad_element": 0,
+             "unique_ligands_before": 0, "unique_ligands_after": 0}
+    spec = DRUGLIKE_TIERS.get(tier)
+
+    # 1) 逐样本计算配体描述符与规范化 SMILES
+    rows = []
+    for e in entries:
+        lpath = os.path.join(outdir, e[1])
+        comp = os.path.basename(e[0])[len("pocket_"):-len(".pdb")].rpartition("_")[2]
+        m = Chem.MolFromMolFile(lpath, sanitize=False, removeHs=True)
+        if m is None:
+            stats["unreadable"] += 1
+            continue
+        try:
+            Chem.SanitizeMol(m)
+        except Exception:
+            stats["unreadable"] += 1
+            continue
+        # 元素词表检查(先于一切描述符; 词表外元素会让训练直接崩)
+        bad = sorted({a.GetAtomicNum() for a in m.GetAtoms()} - SUPPORTED_ELEMENTS)
+        if bad:
+            stats["bad_element"] += 1
+            skipped.append((os.path.basename(e[1]),
+                            "词表外元素 %s (仅支持 C/N/O/F/P/S/Cl)" % bad))
+            continue
+        canon = Chem.MolToSmiles(m)
+        if spec and comp in JUNK_CCD:
+            stats["junk_ccd"] += 1
+            skipped.append((os.path.basename(e[1]), "非类药配体(%s: 脂类/去垢剂/辅酶)" % comp))
+            continue
+        if spec:
+            lo, hi, lpmax, qmin, rmin = spec
+            mw = Descriptors.MolWt(m)
+            lp = Crippen.MolLogP(m)
+            q = QED.qed(m)
+            nr = rdMolDescriptors.CalcNumRings(m)
+            if not (lo <= mw <= hi):
+                stats["druglike_reject"] += 1
+                skipped.append((os.path.basename(e[1]),
+                                "类药性: MW %.0f 不在 [%.0f,%.0f]" % (mw, lo, hi)))
+                continue
+            if lp > lpmax:
+                stats["druglike_reject"] += 1
+                skipped.append((os.path.basename(e[1]), "类药性: LogP %.2f > %.1f" % (lp, lpmax)))
+                continue
+            if q < qmin:
+                stats["druglike_reject"] += 1
+                skipped.append((os.path.basename(e[1]), "类药性: QED %.3f < %.2f" % (q, qmin)))
+                continue
+            if nr < rmin:
+                stats["druglike_reject"] += 1
+                skipped.append((os.path.basename(e[1]), "类药性: 环数 %d < %d" % (nr, rmin)))
+                continue
+        rows.append({"entry": e, "canon": canon, "comp": comp,
+                     "pid": os.path.basename(e[0])[len("pocket_"):-len(".pdb")].rpartition("_")[0]})
+
+    stats["unique_ligands_before"] = len({r["canon"] for r in rows})
+
+    # 2) 同配体去冗余: 按 (规范化 SMILES) 分组, 每组最多保留 max_per_ligand 个
+    #    按 pid 排序保证确定性(与随机种子无关, 结果可复现)
+    by_lig = {}
+    for r in sorted(rows, key=lambda x: (x["canon"], x["pid"], x["entry"][0])):
+        by_lig.setdefault(r["canon"], []).append(r)
+    kept = []
+    for canon, group in by_lig.items():
+        keep_n = max_per_ligand if max_per_ligand and max_per_ligand > 0 else len(group)
+        kept.extend(group[:keep_n])
+        for r in group[keep_n:]:
+            stats["duplicate_capped"] += 1
+            skipped.append((os.path.basename(r["entry"][1]),
+                            "同配体冗余: %s 已达上限 %d" % (canon[:40], max_per_ligand)))
+    stats["unique_ligands_after"] = len({r["canon"] for r in kept})
+
+    # 3) 淘汰样本的文件删除, 避免留下无人引用的垃圾文件
+    kept_ids = {r["entry"][0] for r in kept}
+    for e in entries:
+        if e[0] not in kept_ids:
+            for rel in (e[0], e[1]):
+                try:
+                    os.remove(os.path.join(outdir, rel))
+                except OSError:
+                    pass
+    return [r["entry"] for r in kept], stats
+
+
 def process_pdb(args):
     """处理一个 PDB 条目下的所有配体对。返回 (entries, skipped, stats)"""
     (pid, items, outdir, work, radius, seed, base, on_mismatch) = args
@@ -254,6 +376,16 @@ def main():
     ap.add_argument("--out", default=os.path.join(DATA, "gpcr_v3"))
     ap.add_argument("--pocket-radius", type=float, default=12.0)
     ap.add_argument("--val-ratio", type=float, default=0.15)
+    ap.add_argument("--split-by", choices=["structure", "pair"], default="structure",
+                    help="划分单位: structure=按结构(PDB ID)划分(默认, 防同一口袋泄漏到验证集); "
+                         "pair=按配体对随机划分(旧行为, 存在同口袋跨集泄漏)")
+    ap.add_argument("--drug-like", choices=["off", "loose", "medium", "strict"],
+                    default="medium",
+                    help="共晶配体的类药性过滤档位(默认 medium): 落在 RCSB GPCR 复合物里的"
+                         "配体有很大比例是胆固醇/去垢剂/辅酶, 不筛掉会教模型生成油腻分子")
+    ap.add_argument("--max-per-ligand", type=int, default=8,
+                    help="同一配体(按规范化 SMILES)最多保留多少个不同口袋的样本, "
+                         "0 表示不限制。实测 CLR 253 个、TEP 77 个, 两个分子占 41%% 样本")
     ap.add_argument("--seed", type=int, default=2021)
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--on-mismatch", choices=["skip", "fallback"], default="skip",
@@ -309,12 +441,54 @@ def main():
     if len(entries) < args.min_samples:
         raise SystemExit("有效样本过少 (%d < %d)" % (len(entries), args.min_samples))
 
+    # ---- 数据治理: 类药性过滤 + 同配体去冗余 ----
+    # 这一步在建库阶段就做, 而不是留给训练脚本, 以保证交付的数据集本身就是干净的
+    entries, cur = curate_entries(entries, args.out, args.drug_like,
+                                  args.max_per_ligand, skipped)
+    print("数据治理(%s, 同配体上限 %s): 保留 %d | 非类药配体 -%d | 描述符不合格 -%d | "
+          "词表外元素 -%d | 冗余裁剪 -%d | 不可解析 -%d"
+          % (args.drug_like, args.max_per_ligand, len(entries), cur["junk_ccd"],
+             cur["druglike_reject"], cur["bad_element"], cur["duplicate_capped"],
+             cur["unreadable"]), flush=True)
+    print("  唯一配体: 治理前 %d -> 治理后 %d" % (cur["unique_ligands_before"],
+                                                  cur["unique_ligands_after"]), flush=True)
+    if len(entries) < args.min_samples:
+        raise SystemExit("类药性治理后有效样本过少 (%d < %d)" % (len(entries), args.min_samples))
+
+    # ---- 划分 ----
+    # 默认按**结构(PDB ID)**划分, 而不是按配体对随机划分。
+    # 理由: 一个结构常含多个配体对(实测 738 结构 / 1009 对), 按对随机会把**同一个
+    # 口袋**同时放进训练集和验证集, 验证损失因"见过这个口袋"而虚低 —— 这是数据泄漏。
+    # 按结构划分保证验证集的口袋在训练集中从未出现, 验证指标才反映真实泛化。
+    pid_of = {}
+    for e in entries:
+        # 口袋文件名形如 pocket_<pid>_<comp>.pdb
+        name = os.path.basename(e[0])
+        parts = name[len("pocket_"):-len(".pdb")].split("_") if name.startswith("pocket_") else []
+        pid_of[e[0]] = parts[0] if parts else name
+
     random.seed(args.seed)
-    shuffled = entries[:]
-    random.shuffle(shuffled)
-    n_val = max(1, int(len(shuffled) * args.val_ratio))
-    split = {"train": [tuple(e[:2]) for e in shuffled[n_val:]],
-             "test": [tuple(e[:2]) for e in shuffled[:n_val]]}
+    if args.split_by == "structure":
+        pids = sorted(set(pid_of.values()))
+        random.shuffle(pids)
+        n_val_pid = max(1, int(round(len(pids) * args.val_ratio)))
+        val_pids = set(pids[:n_val_pid])
+        train_entries = [e for e in entries if pid_of[e[0]] not in val_pids]
+        val_entries = [e for e in entries if pid_of[e[0]] in val_pids]
+    else:
+        shuffled = entries[:]
+        random.shuffle(shuffled)
+        n_val = max(1, int(len(shuffled) * args.val_ratio))
+        val_entries, train_entries = shuffled[:n_val], shuffled[n_val:]
+
+    split = {"train": [tuple(e[:2]) for e in train_entries],
+             "test": [tuple(e[:2]) for e in val_entries]}
+    # 泄漏自检: 训练集与验证集的结构集合必须不相交
+    tr_pids = {pid_of[e[0]] for e in train_entries}
+    va_pids = {pid_of[e[0]] for e in val_entries}
+    leaked = sorted(tr_pids & va_pids)
+    if args.split_by == "structure" and leaked:
+        raise SystemExit("划分自检失败: 训练/验证结构重叠 %d 个: %s" % (len(leaked), leaked[:5]))
 
     with open(os.path.join(args.out, "index.pkl"), "wb") as f:
         pickle.dump(entries, f)
@@ -323,7 +497,20 @@ def main():
     with open(os.path.join(args.out, "build_report.txt"), "w", encoding="utf-8") as f:
         f.write("sources=rcsb_pfam_PF00001_human_ligand_bound\n")
         f.write("total=%d\ntrain=%d\nval=%d\n" % (len(entries), len(split["train"]), len(split["test"])))
+        f.write("split_by=%s (seed=%d, val_ratio=%.3f)\n"
+                % (args.split_by, args.seed, args.val_ratio))
+        f.write("train_structures=%d\nval_structures=%d\nstructure_overlap=%d\n"
+                % (len(tr_pids), len(va_pids), len(leaked)))
+        f.write("expected_pairs_per_structure=%.2f\n"
+                % (len(entries) / max(1, len({pid_of[e[0]] for e in entries}))))
         f.write("on_mismatch=%s\n" % args.on_mismatch)
+        f.write("drug_like=%s\n" % args.drug_like)
+        f.write("max_per_ligand=%s\n" % args.max_per_ligand)
+        f.write("curation: junk_ccd=%d druglike_reject=%d bad_element=%d duplicate_capped=%d unreadable=%d\n"
+                % (cur["junk_ccd"], cur["druglike_reject"], cur["bad_element"],
+                   cur["duplicate_capped"], cur["unreadable"]))
+        f.write("unique_ligands: before=%d after=%d\n"
+                % (cur["unique_ligands_before"], cur["unique_ligands_after"]))
         f.write("ligand_source=experimental_coords(default)_or_generated_fallback\n")
         f.write("experimental_pose=%d\n" % total["experimental"])
         f.write("fallback_generated=%d\n" % total["fallback"])

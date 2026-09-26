@@ -165,7 +165,6 @@ class PDBProtein(object):
         selected = []
         for residue in self.residues:
             distance = np.linalg.norm(residue[criterion] - center, ord=2)
-            print(residue[criterion], distance)
             if distance < radius:
                 selected.append(residue)
         return selected

@@ -1,0 +1,82 @@
+sources=rcsb_pfam_PF00001_human_ligand_bound
+total=262
+train=223
+val=39
+split_by=structure (seed=2021, val_ratio=0.150)
+train_structures=217
+val_structures=38
+structure_overlap=0
+expected_pairs_per_structure=1.03
+on_mismatch=skip
+drug_like=medium
+max_per_ligand=8
+curation: junk_ccd=293 druglike_reject=211 bad_element=24 duplicate_capped=17 unreadable=0
+unique_ligands: before=201 after=201
+ligand_source=experimental_coords(default)_or_generated_fallback
+experimental_pose=807
+fallback_generated=0
+composition_mismatch=24
+unusable_reasons=[('composition_mismatch', 24), ('template_fail', 1)]
+structures=262
+pocket_radius=12.0
+skipped=572
+  skip 3V2Y/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 5TGZ/ZDG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 5XR8/8D0: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6DO1/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6TOD/SOG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 6WQA/CLR: too few pocket residues
+  skip 7EVY/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7PP1: cif parse: Chain id ('AAA') exceeds PDB format limit.
+  skip 7SRQ/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7TD4/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7T9I/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7T9N/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7VOE/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7UTZ/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7WC7/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7WC9/CLR: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7XW5/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 7XW6/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8J6P/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8J6Q/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y02/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y01/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 8Y73/CLR: ligand pose unusable: template_fail (已弃用, 不回退以免穿模)
+  skip 9B54/A1AIW: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9GE3/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9WNG/NAG: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip 9YDA/RET: ligand pose unusable: composition_mismatch (已弃用, 不回退以免穿模)
+  skip lig_10KT_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_23SO_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_2RH1_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_24XZ_UDP.sdf: 类药性: QED 0.269 < 0.30
+  skip lig_22ES_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_2YDV_SOG.sdf: 非类药配体(SOG: 脂类/去垢剂/辅酶)
+  skip lig_3NY8_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3NY9_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3D4S_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_3V2Y_ML5.sdf: 类药性: 环数 1 < 2
+  skip lig_4EIY_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4IB4_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4NC3_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4NTJ_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4UHR_NGI.sdf: 类药性: QED 0.217 < 0.30
+  skip lig_4UG2_NGI.sdf: 类药性: QED 0.217 < 0.30
+  skip lig_4PXZ_6AD.sdf: 类药性: QED 0.160 < 0.30
+  skip lig_4PXZ_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4XNV_BUR.sdf: 类药性: LogP 6.71 > 6.0
+  skip lig_4XNV_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_4XNV_Y01.sdf: 非类药配体(Y01: 脂类/去垢剂/辅酶)
+  skip lig_4XNW_2ID.sdf: 词表外元素 [53] (仅支持 C/N/O/F/P/S/Cl)
+  skip lig_5CXV_Y01.sdf: 非类药配体(Y01: 脂类/去垢剂/辅酶)
+  skip lig_5D5A_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5IU4_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5IU7_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5IU8_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5IUB_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5IUA_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5K2B_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5K2A_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5JTB_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
+  skip lig_5K2C_CLR.sdf: 非类药配体(CLR: 脂类/去垢剂/辅酶)
