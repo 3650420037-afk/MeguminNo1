@@ -4,24 +4,24 @@
    "type": "kpi_cards",
    "items": [
     {
-     "value": "370 万",
-     "label": "模型参数量",
+     "value": "3.712 M",
+     "label": "总参数量",
      "source": "轻量，单卡可训练"
+    },
+    {
+     "value": "80.4%",
+     "label": "encoder 占比",
+     "source": "微调时冻结，表征从未更新"
+    },
+    {
+     "value": "1.4%",
+     "label": "frontier_pred 占比",
+     "source": "控制何时停止"
     },
     {
      "value": "6 层",
      "label": "等变注意力编码",
      "source": "256 标量 / 64 方向通道"
-    },
-    {
-     "value": "kNN 48",
-     "label": "口袋组合图",
-     "source": "cutoff 10 Å"
-    },
-    {
-     "value": "4 头",
-     "label": "前沿 / 位置 / 元素 / 键",
-     "source": "位置头为三分量混合密度网络"
     }
    ]
   }

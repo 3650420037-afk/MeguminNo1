@@ -1,0 +1,60 @@
+{
+ "components": [
+  {
+   "type": "data_table",
+   "columns": [
+    {
+     "key": "t",
+     "label": "靶点"
+    },
+    {
+     "key": "c",
+     "label": "ChEMBL ID"
+    },
+    {
+     "key": "n",
+     "label": "活性配体数"
+    }
+   ],
+   "rows": [
+    {
+     "cells": {
+      "t": "A2A",
+      "c": "CHEMBL251",
+      "n": "6,520"
+     }
+    },
+    {
+     "cells": {
+      "t": "β2-AR",
+      "c": "CHEMBL210",
+      "n": "2,088"
+     }
+    },
+    {
+     "cells": {
+      "t": "D3",
+      "c": "CHEMBL234",
+      "n": "6,292"
+     }
+    },
+    {
+     "cells": {
+      "t": "5-HT2B",
+      "c": "CHEMBL1833",
+      "n": "2,277"
+     }
+    },
+    {
+     "cells": {
+      "t": "合计",
+      "c": "—",
+      "n": "17,177"
+     },
+     "emphasis": "total"
+    }
+   ],
+   "source": "已按 --parallel 12 --cap 6000 启动全量对接；完成后按对接位姿构建高密度数据集。第一优化轴 = 结合强度，对接级 A/B 正在运行"
+  }
+ ]
+}

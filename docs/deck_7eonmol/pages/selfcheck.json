@@ -1,0 +1,29 @@
+{
+ "components": [
+  {
+   "type": "kpi_cards",
+   "items": [
+    {
+     "value": "0.0 vs 0.5",
+     "label": "评测目标 ≠ 出货目标",
+     "source": "评测关惩罚，出货开惩罚"
+    },
+    {
+     "value": "5 组",
+     "label": "A/B 结论作废重跑",
+     "source": "ab_scale 至 ab_v6_s2025"
+    },
+    {
+     "value": "NOT_PROMOTED",
+     "label": "重跑结论：种子 2024",
+     "source": "QED 差 −0.084，超 0.05 容差"
+    },
+    {
+     "value": "13 条",
+     "label": "新增护栏检查",
+     "source": "45/45 测试通过"
+    }
+   ]
+  }
+ ]
+}

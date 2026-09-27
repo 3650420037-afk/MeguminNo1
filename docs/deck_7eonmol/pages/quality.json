@@ -4,24 +4,24 @@
    "type": "kpi_cards",
    "items": [
     {
-     "value": "0.825",
-     "label": "QED 中位（最高 0.946）",
-     "source": "76% 的分子 QED ≥ 0.8"
+     "value": "307 对",
+     "label": "训练样本 261 / 46",
+     "source": "全部为对接位姿"
     },
     {
-     "value": "3.33",
-     "label": "SA 中位",
-     "source": "全部落在可合成区间 1.5–5.9"
+     "value": "4 个口袋",
+     "label": "40–127 对每口袋",
+     "source": "A2A/B2AR/D3/5HT2B"
     },
     {
-     "value": "1,960",
-     "label": "唯一 Murcko 骨架",
-     "source": "化学空间覆盖广，未塌缩"
+     "value": "2.742 Å",
+     "label": "位姿最近重原子距离中位",
+     "source": "最小 1.653 Å（判据 ≥ 1.5）"
     },
     {
-     "value": "362 Da",
-     "label": "MW 中位",
-     "source": "口服药物甜区"
+     "value": "0% / 0",
+     "label": "穿模率 / 结构泄漏",
+     "source": "按 PDB ID 划分并自检"
     }
    ]
   }

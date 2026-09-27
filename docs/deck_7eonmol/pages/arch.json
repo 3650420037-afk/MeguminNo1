@@ -1,0 +1,25 @@
+{
+ "components": [
+  {
+   "type": "row_cards",
+   "items": [
+    {
+     "title": "只训了 19.6% 参数",
+     "text": "freeze_encoder=true → encoder 2.984 M（80.4%）从未更新"
+    },
+    {
+     "title": "容量与责任错配",
+     "text": "frontier_pred 仅 1.4% 却控制“何时停止”；v4 冻结它反而更差（完成 30、QED 0.580）"
+    },
+    {
+     "title": "两轮单变量实验",
+     "text": "v7 解冻 encoder + 分层 LR（encoder 1e-5 / 头部 1e-4）；v8 再把 frontier_pred 扩容 4.2 倍"
+    },
+    {
+     "title": "状态",
+     "text": "v7 / v8 均已训练完成，正按生成指标筛选——验证损失不能预测生成质量"
+    }
+   ]
+  }
+ ]
+}

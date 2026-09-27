@@ -16,7 +16,7 @@
    "id": "cover",
    "type": "cover",
    "heading": "7-eonmol：口袋引导的 GPCR 靶向分子生成",
-   "summary": "等变图神经网络 + 引导束搜索 · 自有微调权重 · 类药化合物库"
+   "summary": "等变图神经网络 + 引导束搜索 · 类药化合物库 · 桌面级一键使用"
   },
   {
    "id": "s01",
@@ -52,7 +52,7 @@
    "id": "baseline",
    "type": "content",
    "kind": "data",
-   "heading": "基线：Pocket2Mol 等变图神经网络"
+   "heading": "基线 Pocket2Mol：3.712 M 参数的解剖"
   },
   {
    "id": "guided",
@@ -64,67 +64,61 @@
    "id": "ftstory",
    "type": "content",
    "kind": "process",
-   "heading": "自训权重：从连续失败到双种子晋级"
+   "heading": "微调线：失败 → 根因 → 如实结论"
   },
   {
    "id": "ftab",
    "type": "content",
    "kind": "data",
-   "heading": "双种子严格 A/B：两轮均判 PROMOTED"
+   "heading": "出货目标下的双种子 A/B：未通过"
   },
   {
    "id": "density",
    "type": "content",
    "kind": "process",
-   "heading": "决定成败的不是数据总量，是每口袋样本密度"
+   "heading": "决定成败的是每口袋样本密度"
   },
   {
    "id": "s02",
    "type": "chapter",
    "heading": "02 效果展示",
-   "summary": "四靶点、一万次生成：用可复核的数字说话"
+   "summary": "四靶点、逐项可复核：先给当前出货库的真实数据，再给未通过的结论"
   },
   {
    "id": "scale",
    "type": "content",
    "kind": "data",
-   "heading": "四靶点：10,004 生成 → 6,864 入库"
+   "heading": "四靶点出货库（我方自训权重）"
   },
   {
    "id": "quality",
    "type": "content",
    "kind": "data",
-   "heading": "主库质量画像（A2A，n=2,931）"
+   "heading": "训练数据与位姿质量"
   },
   {
    "id": "qedup",
    "type": "content",
    "kind": "quote",
-   "heading": "关键证据：A2A 主库类药性"
+   "heading": "关键证据：类药性（QED）"
   },
   {
-   "id": "dock",
+   "id": "selfcheck",
    "type": "content",
    "kind": "data",
-   "heading": "全库虚拟筛选：均值 −9.68 kcal/mol"
+   "heading": "自查推翻了自家的晋级结论"
   },
   {
-   "id": "novelty",
+   "id": "guards",
    "type": "content",
    "kind": "evidence",
-   "heading": "新颖性：Top50 全部高新颖"
+   "heading": "四处会静默出错的缺陷，已修复留档"
   },
   {
-   "id": "reverse",
+   "id": "arch",
    "type": "content",
-   "kind": "comparison",
-   "heading": "逆向阳性对照：管线可信，生成更优"
-  },
-  {
-   "id": "general",
-   "type": "content",
-   "kind": "data",
-   "heading": "跨靶点通用性：四靶点同一管线"
+   "kind": "list",
+   "heading": "架构容量实验：微调只训了 19.6% 参数"
   },
   {
    "id": "s03",
@@ -143,6 +137,12 @@
    "type": "content",
    "kind": "list",
    "heading": "价值、诚信与边界"
+  },
+  {
+   "id": "next",
+   "type": "content",
+   "kind": "data",
+   "heading": "在研：四靶点全量活性分子对接"
   },
   {
    "id": "matrix",
