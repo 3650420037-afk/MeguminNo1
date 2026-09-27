@@ -89,6 +89,10 @@ if __name__ == '__main__':
                         default=os.path.join(CONFIGS, 'sample_for_pdb.yml'))
     parser.add_argument('--device', type=str, default='cuda')
     parser.add_argument('--outdir', type=str, default=OUTPUTS)
+    parser.add_argument('--save-snapshots', action='store_true',
+                        help='额外写出逐步束状态快照 samples_init.pt / samples_<N>.pt。'
+                             '单个 170-210 MB, 默认关闭(下游只读 SMILES.txt / SDF/ 与 '
+                             'samples_all.pt); 仅在需要中断恢复或调试时打开。')
     args = parser.parse_args()
 
     miss = missing_hint([('受体结构', args.pdb_path), ('采样配置', args.config)])
@@ -168,7 +172,10 @@ if __name__ == '__main__':
 
     print_pool_status(pool, logger)
     logger.info('Saving samples...')
-    torch.save(pool, os.path.join(log_dir, 'samples_init.pt'))
+    # samples_init.pt 同样是整个束状态(百 MB 级), 且**没有任何下游读取它**
+    # (下游只用 SMILES.txt / SDF/ 与 samples_all.pt)。因此默认不写。
+    if args.save_snapshots:
+        torch.save(pool, os.path.join(log_dir, 'samples_init.pt'))
 
     # # Sampling loop
     logger.info('Start sampling')
@@ -250,7 +257,13 @@ if __name__ == '__main__':
             pool.queue = [queue_tmp[idx] for idx in next_idx]
 
             print_pool_status(pool, logger)
-            torch.save(pool, os.path.join(log_dir, 'samples_%d.pt' % global_step))
+            # 逐步快照**默认不写**: 每个快照会把整个束状态(含蛋白特征)序列化,
+            # 实测单个 170-210 MB —— 一次 60 分子的采样就能产出数 GB, 累积曾吃掉
+            # 仓库 43 GB(outputs 下 412 个 samples_<N>.pt), 有爆盘风险。
+            # 官方 src/sample.py 的对应行本就是注释掉的, 这里对齐官方行为。
+            # 确需中断恢复时用 --save-snapshots 显式打开。
+            if args.save_snapshots:
+                torch.save(pool, os.path.join(log_dir, 'samples_%d.pt' % global_step))
     except KeyboardInterrupt:
         logger.info('Terminated. Generated molecules will be saved.')
 

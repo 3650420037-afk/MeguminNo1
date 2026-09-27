@@ -144,7 +144,10 @@ def dock_smiles(smis, target, outdir, parallel, exhaustiveness, logf):
 
 def main():
     ap = argparse.ArgumentParser(description="对接级 A/B 对照(Vina 为首要判据)")
-    ap.add_argument("--ckpts", nargs="+", required=True)
+    ap.add_argument("--ckpts", nargs="+", default=None,
+                    help="要比较的检查点; 第一个作为 baseline。用 --from-csv 时可不传")
+    ap.add_argument("--from-csv", default=None,
+                    help="不重新生成/对接, 只读既有结果 CSV 并用当前判据逻辑离线重算")
     ap.add_argument("--target", default="A2A")
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--beam", type=int, default=50)
@@ -156,7 +159,9 @@ def main():
     ap.add_argument("--out", default=os.path.join(ROOT, "outputs", "ab_docking.csv"))
     args = ap.parse_args()
 
-    args.ckpts = [c if os.path.isabs(c) else os.path.join(ROOT, c) for c in args.ckpts]
+    if not args.ckpts and not args.from_csv:
+        ap.error("必须给 --ckpts, 或者用 --from-csv 离线重算")
+    args.ckpts = [c if os.path.isabs(c) else os.path.join(ROOT, c) for c in (args.ckpts or [])]
     # 同名检查点要区分开, 否则产物目录会互相覆盖
     names, seen = [], {}
     for c in args.ckpts:
@@ -175,33 +180,55 @@ def main():
     log("=" * 78)
 
     rows = []
-    for seed in args.seeds:
-        for name, ckpt in zip(names, args.ckpts):
-            wd = ensure_dir(os.path.join(args.work, "%s_s%d" % (name, seed)))
-            t0 = time.time()
-            log("\n[%s | 种子 %d] 生成中 ..." % (name, seed))
-            sess = gen_one(ckpt, args.target, args.n, args.beam, args.max_steps, seed, wd)
-            if sess is None:
-                log("  生成失败, 跳过")
-                continue
-            smi_p = os.path.join(sess, "SMILES.txt")
-            smis = read_smiles_txt(smi_p) if os.path.exists(smi_p) else []
-            log("  生成完成: %d 个分子 (%.0f s), 开始对接 ..." % (len(smis), time.time() - t0))
-            if not smis:
-                continue
-            scores, n_ok = dock_smiles(smis, args.target, os.path.join(wd, "dock"),
-                                       args.parallel, args.exhaustiveness,
-                                       os.path.join(wd, "run.log"))
-            med = st.median(scores) if scores else None
-            log("  对接完成: ok %d | 中位 %s | 用时 %.0f s"
-                % (n_ok, ("%.2f" % med) if med else "NA", time.time() - t0))
-            rows.append({"ckpt": name, "seed": seed, "n_smiles": len(smis),
-                         "n_docked": n_ok,
-                         "vina_mean": round(st.mean(scores), 3) if scores else None,
-                         "vina_med": round(med, 3) if med else None,
-                         "vina_min": round(min(scores), 3) if scores else None,
-                         "frac_le10": round(100.0 * sum(1 for x in scores if x <= -10) / len(scores), 1)
-                         if scores else None})
+    if args.from_csv:
+        # 离线重算判据: 只读既有 CSV, 不重新生成/对接。
+        # 用途: 判据逻辑若被修正(例如硬判据由"对接数"改为"生成数"), 无需重跑昂贵的对接
+        # 就能用新逻辑重新判定历史结果。
+        with open(args.from_csv, encoding="utf-8-sig", newline="") as f:
+            for r in csv.DictReader(f):
+                for k in ("seed", "n_smiles", "n_docked"):
+                    r[k] = int(r[k])
+                for k in ("vina_mean", "vina_med", "vina_min", "frac_le10"):
+                    r[k] = float(r[k]) if r.get(k) not in (None, "", "None") else None
+                rows.append(r)
+        order = []
+        for r in rows:
+            if r["ckpt"] not in order:
+                order.append(r["ckpt"])
+        if len(order) < 2:
+            raise SystemExit("CSV 里只有 %d 个检查点, 无法成对比较" % len(order))
+        names = order
+        args.seeds = sorted({r["seed"] for r in rows})
+        log("从 CSV 离线重算: %s (%d 行, %d 个检查点, 种子 %s)"
+            % (args.from_csv, len(rows), len(names), args.seeds))
+    else:
+        for seed in args.seeds:
+            for name, ckpt in zip(names, args.ckpts):
+                wd = ensure_dir(os.path.join(args.work, "%s_s%d" % (name, seed)))
+                t0 = time.time()
+                log("\n[%s | 种子 %d] 生成中 ..." % (name, seed))
+                sess = gen_one(ckpt, args.target, args.n, args.beam, args.max_steps, seed, wd)
+                if sess is None:
+                    log("  生成失败, 跳过")
+                    continue
+                smi_p = os.path.join(sess, "SMILES.txt")
+                smis = read_smiles_txt(smi_p) if os.path.exists(smi_p) else []
+                log("  生成完成: %d 个分子 (%.0f s), 开始对接 ..." % (len(smis), time.time() - t0))
+                if not smis:
+                    continue
+                scores, n_ok = dock_smiles(smis, args.target, os.path.join(wd, "dock"),
+                                           args.parallel, args.exhaustiveness,
+                                           os.path.join(wd, "run.log"))
+                med = st.median(scores) if scores else None
+                log("  对接完成: ok %d | 中位 %s | 用时 %.0f s"
+                    % (n_ok, ("%.2f" % med) if med else "NA", time.time() - t0))
+                rows.append({"ckpt": name, "seed": seed, "n_smiles": len(smis),
+                             "n_docked": n_ok,
+                             "vina_mean": round(st.mean(scores), 3) if scores else None,
+                             "vina_med": round(med, 3) if med else None,
+                             "vina_min": round(min(scores), 3) if scores else None,
+                             "frac_le10": round(100.0 * sum(1 for x in scores if x <= -10) / len(scores), 1)
+                             if scores else None})
 
     if not rows:
         raise SystemExit("没有任何结果")
@@ -233,10 +260,15 @@ def main():
                 miss += 1
                 continue
             b, f = b[0], f[0]
-            dn = f["n_docked"] - b["n_docked"]
+            # 硬判据必须看**生成数**而不是对接成功数:
+            # 历史最大失败模式是"停止策略被破坏、分子永不终止", 其指纹是**生成分子数骤降**
+            # (采样日志 Failed=0, 完成数 63 -> 23/7)。若只看对接成功数, 生成退化了也可能看不出来。
+            # 两者都要求不退化, 取更严的那个。
+            dn = f["n_smiles"] - b["n_smiles"]
+            dnd = f["n_docked"] - b["n_docked"]
             dv = (f["vina_med"] - b["vina_med"]) if (f["vina_med"] is not None
                                                     and b["vina_med"] is not None) else None
-            hard = dn >= TOL_N
+            hard = (dn >= TOL_N) and (dnd >= TOL_N)
             if dv is None:
                 ok_v = False
             elif dv <= -TOL_VINA:
@@ -245,9 +277,9 @@ def main():
                 ok_v = True
             else:
                 ok_v, worse = False, worse + 1
-            log("  种子 %d: 对接数 %d->%d (%+d, %s) | Vina中位 %s->%s (%s, %s)"
-                % (seed, b["n_docked"], f["n_docked"], dn, "OK" if hard else "退化!",
-                   b["vina_med"], f["vina_med"],
+            log("  种子 %d: 生成数 %d->%d (%+d, %s) | 对接数 %d->%d | Vina中位 %s->%s (%s, %s)"
+                % (seed, b["n_smiles"], f["n_smiles"], dn, "OK" if hard else "退化!",
+                   b["n_docked"], f["n_docked"], b["vina_med"], f["vina_med"],
                    ("%+.2f" % dv) if dv is not None else "NA",
                    "持平" if ok_v and dv is not None and abs(dv) <= TOL_VINA
                    else ("更好" if ok_v else "更差!")))

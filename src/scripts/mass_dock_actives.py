@@ -49,6 +49,72 @@ def log(m):
     print(m, flush=True)
 
 
+def free_gb(path):
+    """返回 path 所在磁盘的可用空间(GB)。取不到则返回 None。"""
+    try:
+        import shutil as _sh
+        return _sh.disk_usage(path).free / (1024.0 ** 3)
+    except Exception:
+        return None
+
+
+def acquire_lock(path):
+    """单实例锁: 防止两个实例同时写同一批分块目录。
+
+    为什么必须有(实测教训): 本轮验证"磁盘预检"时误用一个极小 --cap 起了第二个实例,
+    它的分块队列与正在跑的实例不一致 —— 若让它继续, 就会用错误的队列覆盖
+    `s00.txt` 并向**正在被另一个进程写入**的 `c00/` 里再启动一个对接进程,
+    位姿互相覆盖(此前已发生过 "A2A 175 个只剩 30 个" 的事故)。
+    那次只是因为输出管道被提前关闭、进程被杀才侥幸没出事 —— 不能靠侥幸。
+
+    用 O_CREAT|O_EXCL 原子创建, 不做 PID 存活判断(Windows 上 os.kill(pid, 0)
+    会**真的终止**进程, 不能用)。进程崩溃留下的过期锁需人工确认后删除,
+    或加 --force-unlock。
+    """
+    try:
+        fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        try:
+            info = open(path, encoding="utf-8").read().strip()
+        except Exception:
+            info = "(无法读取)"
+        raise SystemExit(
+            "检测到锁文件已存在, 拒绝启动:\n  %s\n  内容: %s\n"
+            "同一靶点目录**不能有两个实例同时写**(会争抢同一批分块并互相覆盖位姿)。\n"
+            "若确认没有其它实例在跑(例如上次异常退出留下了过期锁), 删除该文件或加 "
+            "--force-unlock 再重试。" % (path, info))
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        f.write("pid=%d started=%s\n" % (os.getpid(), time.strftime("%Y-%m-%d %H:%M:%S")))
+    return path
+
+
+def release_lock(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def require_free_space(need_gb, where):
+    """启动长任务前检查磁盘余量。
+
+    为什么必须有: 本仓库发生过两次"输出目录无限增长把盘写满"的事故 ——
+    一次是采样逐步快照(646 个 samples_<n>.pt, 101 GB), 一次是同样的快照
+    在 sample_for_pdb.py 里累积(441 个, 40.71 GB)。长任务跑到一半爆盘会
+    **整批白跑**, 而事前检查只要一行。
+    """
+    g = free_gb(where)
+    if g is None:
+        log("  [警告] 无法读取磁盘余量, 跳过空间预检")
+        return
+    if g < need_gb:
+        raise SystemExit(
+            "磁盘余量不足: %s 仅剩 %.1f GB, 本任务要求至少 %.1f GB。\n"
+            "请先清理中间产物(可运行 src/scripts/purge_disk_hogs.py --dry-run 预演), "
+            "或换到空间充足的盘。" % (where, g, need_gb))
+    log("  磁盘预检通过: %s 可用 %.1f GB (要求 >= %.1f GB)" % (where, g, need_gb))
+
+
 def load_queue(target, cap):
     """读取该靶点的全量活性分子, 按词表/类药性过滤, 按效价降序取前 cap 个。"""
     from rdkit import Chem, RDLogger
@@ -234,19 +300,33 @@ def main():
     ap.add_argument("--parallel", type=int, default=12, help="每靶点并发分块数")
     ap.add_argument("--exhaustiveness", type=int, default=4)
     ap.add_argument("--cap", type=int, default=6000, help="每靶点最多对接多少分子(按效价降序)")
+    ap.add_argument("--min-free-gb", type=float, default=8.0,
+                    help="启动前要求的磁盘余量(GB); 长任务爆盘会整批白跑")
+    ap.add_argument("--force-unlock", action="store_true",
+                    help="忽略已存在的锁文件(仅在确认没有其它实例运行时使用)")
     args = ap.parse_args()
 
     ensure_dir(WORK_ROOT)
-    log("=" * 74)
-    log("夜间模式: 全量活性分子对接 (并发 %d/靶点, 每靶点上限 %d)"
-        % (args.parallel, args.cap))
-    log("=" * 74)
-    for tg in args.targets:
-        log("[%s] 开始" % tg)
-        run_target(tg, args)
-        log("[%s] 结束" % tg)
-    log("=" * 74)
-    log("全部靶点对接完成。产物: outputs/mass_dock/<靶点>/summary_merged.csv + docking/")
+    lock = os.path.join(WORK_ROOT, ".lock")
+    if args.force_unlock and os.path.exists(lock):
+        log("  [警告] --force-unlock: 忽略已存在的锁 %s" % lock)
+        release_lock(lock)
+    require_free_space(args.min_free_gb, WORK_ROOT)
+    acquire_lock(lock)
+
+    try:
+        log("=" * 74)
+        log("夜间模式: 全量活性分子对接 (并发 %d/靶点, 每靶点上限 %d)"
+            % (args.parallel, args.cap))
+        log("=" * 74)
+        for tg in args.targets:
+            log("[%s] 开始" % tg)
+            run_target(tg, args)
+            log("[%s] 结束" % tg)
+        log("=" * 74)
+        log("全部靶点对接完成。产物: outputs/mass_dock/<靶点>/summary_merged.csv + docking/")
+    finally:
+        release_lock(lock)
 
 
 if __name__ == "__main__":
