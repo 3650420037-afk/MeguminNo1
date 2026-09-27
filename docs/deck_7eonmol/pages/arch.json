@@ -9,15 +9,15 @@
     },
     {
      "title": "容量与责任错配",
-     "text": "frontier_pred 仅 1.4% 却控制“何时停止”；v4 冻结它反而更差（完成 30、QED 0.580）"
+     "text": "frontier_pred 仅 1.4% 却控制“何时停止”；v2 冻结 encoder 时 QED 只有 0.7014"
     },
     {
      "title": "两轮单变量实验",
-     "text": "v7 解冻 encoder + 分层 LR（encoder 1e-5 / 头部 1e-4）；v8 再把 frontier_pred 扩容 4.2 倍"
+     "text": "v7 解冻 encoder + 分层 LR；v8 再把 frontier_pred 扩容 4.2 倍"
     },
     {
-     "title": "状态",
-     "text": "v7 / v8 均已训练完成，正按生成指标筛选——验证损失不能预测生成质量"
+     "title": "结果：v8@800 = v3",
+     "text": "晋级为默认权重；出货目标下双种子四项判据全过，对接级打平"
     }
    ]
   }

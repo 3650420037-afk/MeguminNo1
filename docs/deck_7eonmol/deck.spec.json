@@ -16,7 +16,7 @@
    "id": "cover",
    "type": "cover",
    "heading": "7-eonmol：口袋引导的 GPCR 靶向分子生成",
-   "summary": "等变图神经网络 + 引导束搜索 · 类药化合物库 · 桌面级一键使用"
+   "summary": "等变图神经网络 + 引导束搜索 · 自有微调权重 v3 · 桌面级一键使用"
   },
   {
    "id": "s01",
@@ -64,13 +64,13 @@
    "id": "ftstory",
    "type": "content",
    "kind": "process",
-   "heading": "微调线：失败 → 根因 → 如实结论"
+   "heading": "微调线：失败 → 根因 → v3 晋级"
   },
   {
    "id": "ftab",
    "type": "content",
    "kind": "data",
-   "heading": "出货目标下的双种子 A/B：未通过"
+   "heading": "出货目标下双种子 A/B：v3 四项全过"
   },
   {
    "id": "density",
@@ -82,13 +82,13 @@
    "id": "s02",
    "type": "chapter",
    "heading": "02 效果展示",
-   "summary": "四靶点、逐项可复核：先给当前出货库的真实数据，再给未通过的结论"
+   "summary": "四靶点、逐项可复核：出货库真实数据 + 双种子 A/B + 自查记录"
   },
   {
    "id": "scale",
    "type": "content",
    "kind": "data",
-   "heading": "四靶点出货库（我方自训权重）"
+   "heading": "四靶点出货库"
   },
   {
    "id": "quality",
