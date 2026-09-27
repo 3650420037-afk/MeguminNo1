@@ -99,7 +99,18 @@ def gen_one(ckpt, target, n, beam, steps, seed, keep_dir):
 
 
 def dock_smiles(smis, target, outdir, parallel, exhaustiveness, logf):
-    """按分块并发把 SMILES 对接进该靶点口袋, 返回 (name -> vina_score) 与统计。"""
+    """按分块并发把 SMILES 对接进该靶点口袋。
+
+    返回 (pairs, n_ok), pairs 为 [(vina, heavy_atoms), ...]。
+
+    **为什么要连重原子数一起返回**: Vina 打分与分子大小强相关(原子多 -> 接触多 -> 分更低)。
+    实测本项目自训模型生成的分子比官方权重小约 1/3, 于是原始 Vina 中位更差, 但按
+    **配体效率 LE = -Vina/重原子数** 反而每个靶点都更好。若只报原始分, 会把"分子更小"
+    误读成"亲和力更差"。因此本工具强制同时给出两个口径。
+    summary.csv 自带 smiles 列(与打分同一行), 无需按索引对齐分块队列。
+    """
+    from rdkit import Chem, RDLogger
+    RDLogger.DisableLog("rdApp.*")
     reg = json.load(open(os.path.join(CONFIGS, "targets.json"), encoding="utf-8"))
     t = reg[target]
     pdb = os.path.join(ROOT, t["pdb"])
@@ -126,20 +137,25 @@ def dock_smiles(smis, target, outdir, parallel, exhaustiveness, logf):
     for ci, p, lf in procs:
         p.wait()
         lf.close()
-    scores, n_ok = [], 0
-    for ci, ch, in [(c, x) for c, x in enumerate(chunks) if x]:
+    pairs, n_ok = [], 0
+    for ci, ch in [(c, x) for c, x in enumerate(chunks) if x]:
         cs = os.path.join(outdir, "c%02d" % ci, "summary.csv")
         if not os.path.exists(cs):
             continue
         with open(cs, encoding="utf-8-sig", newline="") as f:
             for r in csv.DictReader(f):
-                if r.get("status") == "ok":
-                    n_ok += 1
-                    try:
-                        scores.append(float(r["vina_score"]))
-                    except Exception:
-                        pass
-    return scores, n_ok
+                if r.get("status") != "ok":
+                    continue
+                try:
+                    v = float(r["vina_score"])
+                except Exception:
+                    continue
+                m = Chem.MolFromSmiles(r.get("smiles", "") or "")
+                if m is None:
+                    continue
+                n_ok += 1
+                pairs.append((v, m.GetNumHeavyAtoms()))
+    return pairs, n_ok
 
 
 def main():
@@ -188,7 +204,7 @@ def main():
             for r in csv.DictReader(f):
                 for k in ("seed", "n_smiles", "n_docked"):
                     r[k] = int(r[k])
-                for k in ("vina_mean", "vina_med", "vina_min", "frac_le10"):
+                for k in ("vina_mean", "vina_med", "vina_min", "frac_le10", "ha_med", "le_med"):
                     r[k] = float(r[k]) if r.get(k) not in (None, "", "None") else None
                 rows.append(r)
         order = []
@@ -216,19 +232,28 @@ def main():
                 log("  生成完成: %d 个分子 (%.0f s), 开始对接 ..." % (len(smis), time.time() - t0))
                 if not smis:
                     continue
-                scores, n_ok = dock_smiles(smis, args.target, os.path.join(wd, "dock"),
-                                           args.parallel, args.exhaustiveness,
-                                           os.path.join(wd, "run.log"))
+                pairs, n_ok = dock_smiles(smis, args.target, os.path.join(wd, "dock"),
+                                          args.parallel, args.exhaustiveness,
+                                          os.path.join(wd, "run.log"))
+                scores = [v for v, _h in pairs]
+                has = [h for _v, h in pairs]
                 med = st.median(scores) if scores else None
-                log("  对接完成: ok %d | 中位 %s | 用时 %.0f s"
-                    % (n_ok, ("%.2f" % med) if med else "NA", time.time() - t0))
+                ha_med = st.median(has) if has else None
+                # 配体效率: 每个分子各算再取中位(不是用中位分除以中位原子数)
+                le_med = st.median([-v / h for v, h in pairs]) if pairs else None
+                log("  对接完成: ok %d | Vina中位 %s | 重原子中位 %s | LE中位 %s | 用时 %.0f s"
+                    % (n_ok, ("%.2f" % med) if med else "NA",
+                       ("%.1f" % ha_med) if ha_med else "NA",
+                       ("%.3f" % le_med) if le_med else "NA", time.time() - t0))
                 rows.append({"ckpt": name, "seed": seed, "n_smiles": len(smis),
                              "n_docked": n_ok,
                              "vina_mean": round(st.mean(scores), 3) if scores else None,
                              "vina_med": round(med, 3) if med else None,
                              "vina_min": round(min(scores), 3) if scores else None,
                              "frac_le10": round(100.0 * sum(1 for x in scores if x <= -10) / len(scores), 1)
-                             if scores else None})
+                             if scores else None,
+                             "ha_med": round(ha_med, 1) if ha_med else None,
+                             "le_med": round(le_med, 3) if le_med else None})
 
     if not rows:
         raise SystemExit("没有任何结果")
@@ -242,12 +267,17 @@ def main():
     log("\n" + "=" * 78)
     log("结果 (baseline = %s)" % base_name)
     log("=" * 78)
-    hdr = "%-24s %5s %5s %8s %8s %8s %8s" % ("检查点", "种子", "对接", "Vina均值", "Vina中位", "最强", "<=-10%")
+    hdr = "%-24s %5s %5s %8s %8s %8s %8s %6s %7s" % (
+        "检查点", "种子", "对接", "Vina均值", "Vina中位", "最强", "<=-10%", "重原子", "LE")
     log(hdr)
     for r in rows:
-        log("%-24s %5s %5s %8s %8s %8s %8s"
+        log("%-24s %5s %5s %8s %8s %8s %8s %6s %7s"
             % (r["ckpt"], r["seed"], r["n_docked"], r["vina_mean"], r["vina_med"],
-               r["vina_min"], r["frac_le10"]))
+               r["vina_min"], r["frac_le10"],
+               r.get("ha_med", "NA"), r.get("le_med", "NA")))
+    log("说明: LE = 配体效率 = -Vina/重原子数, 越大越好。**必须同时看两个口径** ——")
+    log("      Vina 打分与分子大小强相关; 若两臂分子大小差得多, 只比原始分会把")
+    log("      \"分子更小\"误读成\"亲和力更差\"(本项目实测过该混淆)。")
 
     verdicts = []
     for name in names[1:]:
@@ -268,6 +298,12 @@ def main():
             dnd = f["n_docked"] - b["n_docked"]
             dv = (f["vina_med"] - b["vina_med"]) if (f["vina_med"] is not None
                                                     and b["vina_med"] is not None) else None
+            dle = (f["le_med"] - b["le_med"]) if (f.get("le_med") is not None
+                                                 and b.get("le_med") is not None) else None
+            # 尺寸可比性检查 —— 两臂分子大小差超过 15% 时, 原始 Vina 的对比就不公平
+            ha_b, ha_f = b.get("ha_med"), f.get("ha_med")
+            size_ratio = (ha_f / ha_b) if (ha_b and ha_f) else None
+            size_warn = size_ratio is not None and (size_ratio < 0.85 or size_ratio > 1.15)
             hard = (dn >= TOL_N) and (dnd >= TOL_N)
             if dv is None:
                 ok_v = False
@@ -277,12 +313,21 @@ def main():
                 ok_v = True
             else:
                 ok_v, worse = False, worse + 1
-            log("  种子 %d: 生成数 %d->%d (%+d, %s) | 对接数 %d->%d | Vina中位 %s->%s (%s, %s)"
+            log("  种子 %d: 生成数 %d->%d (%+d, %s) | 对接数 %d->%d"
                 % (seed, b["n_smiles"], f["n_smiles"], dn, "OK" if hard else "退化!",
-                   b["n_docked"], f["n_docked"], b["vina_med"], f["vina_med"],
+                   b["n_docked"], f["n_docked"]))
+            log("          原始 Vina中位 %s->%s (%s, %s) | 重原子 %s->%s | LE %s->%s (%s)"
+                % (b["vina_med"], f["vina_med"],
                    ("%+.2f" % dv) if dv is not None else "NA",
                    "持平" if ok_v and dv is not None and abs(dv) <= TOL_VINA
-                   else ("更好" if ok_v else "更差!")))
+                   else ("更好" if ok_v else "更差!"),
+                   ha_b, ha_f, b.get("le_med"), f.get("le_med"),
+                   ("%+.3f" % dle) if dle is not None else "NA"))
+            if size_warn:
+                log("          ⚠ **尺寸不可比**: 重原子 %.1f -> %.1f (%.0f%%)。"
+                    % (ha_b, ha_f, 100 * size_ratio))
+                log("             原始 Vina 的差异很可能主要来自分子大小而非亲和力, "
+                    "**必须以 LE 口径复核**; 仅凭原始分判定会误导。")
             if not (hard and ok_v):
                 verdicts.append((name, seed, "NOT_PROMOTED"))
         if miss:
