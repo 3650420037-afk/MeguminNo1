@@ -50,10 +50,14 @@ class MaskFillModelVN(Module):
         compose_knn_edge_index,
         compose_knn_edge_feature,
         n_samples_pos=-1,
-        n_samples_atom=-1
+        n_samples_atom=-1,
+        frontier_threshold=0,
         ):
+        # frontier_threshold 默认 0 (= logit > 0, 等价 sigmoid > 0.5) 与官方行为一致;
+        # 它是**采样侧校准参数**: 微调后 frontier 输出分布会偏移, 沿用预训练期的阈值
+        # 会让模型过早判定"没有边界原子"从而终止, 生成分子偏小。
         idx_ligand = torch.empty(0).to(idx_protein)  # fake index of ligand
-        focal_resutls = self.sample_focal(compose_feature, compose_pos, idx_ligand, idx_protein, compose_knn_edge_index, compose_knn_edge_feature)
+        focal_resutls = self.sample_focal(compose_feature, compose_pos, idx_ligand, idx_protein, compose_knn_edge_index, compose_knn_edge_feature, frontier_threshold=frontier_threshold)
         if focal_resutls[0]:  # has frontiers
             has_frontier, idx_frontier, p_frontier, idx_focal_in_compose, p_focal, h_compose = focal_resutls
             pos_generated, pdf_pos, idx_parent, abs_pos_mu, pos_sigma, pos_pi = self.sample_position(

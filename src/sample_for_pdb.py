@@ -157,10 +157,18 @@ if __name__ == '__main__':
     pbar = tqdm(total=config.sample.beam_size, desc='InitSample')
     atom_composer = AtomComposer(protein_featurizer.feature_dim, ligand_featurizer.feature_dim, model.config.encoder.knn)
     data = transform_data(data, atom_composer)
+    # frontier 判定阈值: 显式读取新键 sample.threshold.frontier_threshold, 缺省 0
+    # (与 maskfill 的签名默认一致 -> 不写该键时行为与历史完全一致)。
+    # 注意不要与 focal_threshold 混用: 后者在原版 sample.py 里是 **focal 概率**阈值,
+    # 与 frontier 判定无关 —— 此前误以为改它有效, 实测产出逐位相同。
+    _frontier_thr = float(config.sample.threshold.get('frontier_threshold', 0))
+    if _frontier_thr:
+        logger.info('frontier_threshold = %.4f (非默认, 会改变分子大小分布)' % _frontier_thr)
     init_data_list = get_init(data.to(args.device),   # sample the initial atoms
             model = model,
             transform=atom_composer,
-            threshold=config.sample.threshold
+            threshold=config.sample.threshold,
+            frontier_threshold=_frontier_thr
     )
     pool.queue = init_data_list
     if len(pool.queue) > config.sample.beam_size:
@@ -196,7 +204,8 @@ if __name__ == '__main__':
                     data.to(args.device), 
                     model = model,
                     transform = atom_composer,
-                    threshold = config.sample.threshold
+                    threshold = config.sample.threshold,
+                    frontier_threshold = _frontier_thr
                 )
 
                 for data_next in data_next_list:

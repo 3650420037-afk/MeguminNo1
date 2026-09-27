@@ -40,7 +40,14 @@ def logp_to_rank_prob(logp, weight=1.0):
 
 
 @torch.no_grad()  # for a protein-ligand
-def get_init(data, model, transform, threshold):
+def get_init(data, model, transform, threshold, frontier_threshold=0):
+    """frontier_threshold 必须由调用方显式传入才能生效。
+
+    `maskfill.sample_init/sample` 的签名默认是 0(即 logit > 0, 等价于 sigmoid > 0.5),
+    而原先这里**从不传**, 于是配置里的阈值形同虚设 —— 实测把
+    `sample.threshold.focal_threshold` 从 0.5 改到 0.1, 产出分子逐位相同。
+    现改为显式参数, **默认仍为 0**, 不改变既有行为。
+    """
     batch = Batch.from_data_list([data], follow_batch=FOLLOW_BATCH) #batch only contains one data
 
     ### Predict next atoms
@@ -54,6 +61,7 @@ def get_init(data, model, transform, threshold):
         compose_knn_edge_feature = batch.compose_knn_edge_feature,
         n_samples_pos=-1,
         n_samples_atom=5,
+        frontier_threshold=frontier_threshold,
     )
     data = data.to('cpu')
     # no frontier
@@ -116,7 +124,8 @@ def get_init(data, model, transform, threshold):
 
 
 @torch.no_grad()  # for a protein-ligand
-def get_next(data, model, transform, threshold):
+def get_next(data, model, transform, threshold, frontier_threshold=0):
+    """见 get_init 的说明: 阈值必须显式传入, 默认 0 与既有行为一致。"""
     batch = Batch.from_data_list([data], follow_batch=FOLLOW_BATCH) #batch only contains one data
 
     ### Predict next atoms
@@ -131,7 +140,8 @@ def get_next(data, model, transform, threshold):
         ligand_context_bond_index = batch.ligand_context_bond_index,
         ligand_context_bond_type = batch.ligand_context_bond_type,
         n_samples_pos=-1,
-        n_samples_atom=5
+        n_samples_atom=5,
+        frontier_threshold=frontier_threshold,
     )
     data = data.to('cpu')
     # no frontier
