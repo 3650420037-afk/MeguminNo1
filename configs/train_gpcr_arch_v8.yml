@@ -1,0 +1,122 @@
+# ==========================================================================
+# 微调配方 v8 —— 架构线第 2 步: **扩容 frontier_pred**(在 v7 基础上再动一个变量)
+#
+# 为什么要扩容
+# ------------
+# frontier_pred 决定"每个配体原子是否仍是边界原子", 而**没有任何边界原子时生成即终止**
+# (src/models/maskfill.py: sample_focal -> has_frontier=False)。也就是说它同时控制
+# "长在哪里"与"何时停止"。但它只有 0.053 M(占总参数 1.4 %), 容量与责任严重不匹配。
+#
+# 已实测的失效指纹:
+#   - 数据每口袋仅 1.04 样本时, 其漂移导致分子**永不终止**:
+#     采样日志 `[Pool] Queue N | Finished k | Failed 0`(Failed=0 说明不是化学无效),
+#     完成数 63 -> 23/7;
+#   - v4 反过来冻结它(lr 5e-5)结果更差: 完成 30, QED 0.580, SA 4.61。
+#   => 结论: 它必须**学**, 冻结是错的方向; 正确方向是给它足够容量 + 显式监督
+#      (BCE 监督本就存在, 见 maskfill.py 的 loss_frontier)。
+#
+# 本配置相对 v7 的**唯一变量**: frontier 由 128/32/1 层放大到 256/64/2 层
+# (0.053 M -> 约 0.14 M, 2.6 倍), 并给 frontier_pred 单独 5e-4 的更大步长
+# (扩容后它需要从随机初始化开始学)。
+#
+# 重要: 扩容后官方/v2 权重里 frontier_pred 的形状不再匹配, 因此必须
+#   init_strict: false —— 该开关**只允许 frontier_pred 张量差异**, 其余任何
+#   missing/unexpected 都会直接报错, 防止静默丢掉预训练权重。
+#
+# 风险与判据(与 v7 相同): 首要看**完成分子数不退化**(不低于基线 -5);
+# 若终止再次崩坏(Finished 骤降 / Failed=0 且分子超长), 即判定架构线失败,
+# 按既定回退方案转纯训练侧 ReST。
+#
+# 数据: data/gpcr_dock_v1    起点: models/7-eonmol_ft_gpcr_v2.pt
+# ==========================================================================
+
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+  # ==== 本实验的核心改动: 扩容终止模块 ====
+  frontier:
+    hidden_sca: 256
+    hidden_vec: 64
+    layers: 2
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/7-eonmol_ft_gpcr_v2.pt
+  init_strict: false            # 只允许 frontier_pred 形状差异, 其余仍是硬约束
+
+  batch_size: 1
+  grad_accum: 8
+  num_workers: 0
+  pin_memory: false
+
+  max_iters: 6000
+  val_freq: 200
+  early_stop_patience: 6
+  early_stop_min_iters: 1200
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  freeze_encoder: false
+  optimizer:
+    type: adam
+    lr: 1.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+    param_groups:
+      # 顺序即优先级: 先匹配先归属
+      - {pattern: frontier_pred, lr: 5.e-4}   # 从零学, 给更大步长
+      - {pattern: encoder,       lr: 1.e-5}   # 小步慢adapt, 保护预训练表征
+
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      min_num_unmasked: 1
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+dataset:
+  name: pl
+  path: ./data/gpcr_dock_v1
+  split: ./data/gpcr_dock_v1/split_by_name.pt

@@ -1,4 +1,5 @@
 import os
+import sys
 import time
 import random
 import logging
@@ -56,18 +57,39 @@ def load_config(path):
         return EasyDict(yaml.safe_load(f))
 
 
+def _utf8_stream():
+    """给 StreamHandler 一个 UTF-8 包装的 stdout。
+
+    为什么不直接用默认流: 中文 Windows 上默认流按 GBK 编码, 而文件日志已改为 UTF-8,
+    于是"同一份日志两种编码"; 且控制台重定向到文件时中文会变成乱码,
+    与文件日志内容不一致, 给排障制造假信息。
+    取不到 fileno(如某些 IDE/嵌入式环境)则返回 None, 由调用方回退到默认流。
+    """
+    try:
+        return open(sys.stdout.fileno(), mode='w', encoding='utf-8',
+                    errors='replace', buffering=1, closefd=False)
+    except Exception:
+        return None
+
+
 def get_logger(name, log_dir=None):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('[%(asctime)s::%(name)s::%(levelname)s] %(message)s')
 
-    stream_handler = logging.StreamHandler()
+    _s = _utf8_stream()
+    stream_handler = logging.StreamHandler(_s) if _s is not None else logging.StreamHandler()
     stream_handler.setLevel(logging.DEBUG)
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
 
     if log_dir is not None:
-        file_handler = logging.FileHandler(os.path.join(log_dir, 'log.txt'))
+        # encoding='utf-8' 是**必须**的: 不指定时 FileHandler 用 locale 默认编码
+        # (中文 Windows = GBK), 日志里的中文行就不是合法 UTF-8 ——
+        # grep / read / CI 会看到乱码甚至直接报 "line is not valid UTF-8",
+        # 中英混编的日志无法被工具稳定解析(实测差点因此漏看关键的诊断行)。
+        file_handler = logging.FileHandler(os.path.join(log_dir, 'log.txt'),
+                                           encoding='utf-8')
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)

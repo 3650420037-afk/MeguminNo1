@@ -26,8 +26,15 @@ class MaskFillModelVN(Module):
         in_sca, in_vec = self.encoder.out_sca, self.encoder.out_vec
         self.field = get_field_vn(config.field, num_classes=num_classes, num_bond_types=num_bond_types, 
                                              in_sca=in_sca, in_vec=in_vec)
+        # frontier_pred 决定"哪里还能生长 / 何时停止", 是生成能否终止的总开关。
+        # 官方把它写死成 hidden 128/32(仅 0.053 M, 占 1.4%), 容量与责任不匹配。
+        # 现开放为 config.frontier.{hidden_sca,hidden_vec,layers}; 缺省仍是
+        # 128/32/1, 与官方参数名和形状完全一致(向后兼容)。
+        _fr = config.get('frontier', None) or {}
         self.frontier_pred = FrontierLayerVN(in_sca=in_sca, in_vec=in_vec,
-                                                                            hidden_dim_sca=128, hidden_dim_vec=32)
+                                            hidden_dim_sca=int(_fr.get('hidden_sca', 128)),
+                                            hidden_dim_vec=int(_fr.get('hidden_vec', 32)),
+                                            n_layers=int(_fr.get('layers', 1)))
         # self.protein_frontier_pred = FrontierLayerVN(in_sca=in_sca, in_vec=in_vec,
         #                                                                     hidden_dim_sca=128, hidden_dim_vec=32)
         self.pos_predictor = PositionPredictor(in_sca=in_sca, in_vec=in_vec,

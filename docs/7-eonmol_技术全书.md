@@ -1,4 +1,4 @@
-﻿# Pocket2Mol-GPCR 项目技术全书
+# Pocket2Mol-GPCR 项目技术全书
 
 > 版本 1.0 · 2026-09-22 · 面向团队成员、答辩评审与后续接手者
 > 仓库：``（git 远端 `3650420037-afk/MeguminNo1`，73 次提交）
@@ -388,6 +388,27 @@ else:
 
 **效果**：全库 2,931 个分子拥有 **1,960 个唯一 Murcko 骨架**（骨架/分子比 ≈ 0.67），
 Top50 亦为 47 个唯一骨架（原版无惩罚时同类实验骨架集中度明显更高）。
+
+> **⚠ 2026-09 更正：本节曾隐含「惩罚总是生效」，这是错的。**
+>
+> 惩罚权重 `diversity_w` 的真实取值取决于**调用路径**：
+> - `src/sample_for_pdb.py:241` 读的是 `guided_cfg.get('diversity_w', 0.0)`，
+>   **代码默认 0.0 = 关闭**；
+> - `design.py` / `predict.py` 会**注入** `--diversity-w`（默认 0.5）→ 惩罚生效；
+> - 而模板 `configs/sample_for_pdb_guided_l3.yml` **原本没有这个键**，
+>   所以「直接跑模板」时惩罚为 **0**，与走入口脚本的行为不一致。
+>
+> 更严重的连带影响：检查点筛选脚本 `src/scripts/select_ckpt_by_generation.py` 当时只覆盖
+> ckpt/seed/num_samples/beam/max_steps，`diversity_w` **沿用模板**，于是
+> `outputs/ab_scale`、`ab_v4`、`ab_v5`、`ab_v6`、`ab_v6_s2025` 五组 A/B **全部在惩罚=0 下评测**，
+> 而实际出货药库是在惩罚=0.5 下生成的 —— **评测目标与出货目标不一致**。
+>
+> **已修复**：模板显式写入 `diversity_w: 0.5`（单一真源）；
+> `select_ckpt_by_generation.py` 新增 `DIVERSITY_W = 0.5` 常量并在写 cfg 时**显式注入**。
+> 并已在 0.5 下重跑 A2A 双种子 A/B 复核上一轮的晋級结论。
+>
+> 另需说明：上面 0.67 的骨架/分子比取自**旧官方权重药库**（经 `design.py` 生成，惩罚确为 0.5），
+> 该数字有效；但**未做同采样预算下的「惩罚=0」对照**，因此它不能被单独归因于惩罚本身。
 
 ### 4.3 生成构象精修 `relax_mol_geometry`
 

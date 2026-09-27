@@ -204,7 +204,7 @@
 [2026-09-26 13:41:28,546::train::INFO] [Train] Iter 199 | Loss -2.078187 | Loss(Fron) 0.007687 | Loss(Pos) -2.797660 | Loss(Cls) 0.673617 | Loss(Edge) 0.011721 | Loss(Real) 0.015366 | Loss(Fake) 0.011081 | Loss(Surf) 0.000000  
 [2026-09-26 13:41:28,739::train::INFO] [Train] Iter 200 | Loss -2.728112 | Loss(Fron) 0.021108 | Loss(Pos) -3.281935 | Loss(Cls) 0.532008 | Loss(Edge) 0.000001 | Loss(Real) 0.000702 | Loss(Fake) 0.000004 | Loss(Surf) 0.000000  
 [2026-09-26 13:41:31,608::train::INFO] [Validate]  Iter 200 | Loss 0.953737 | Loss(Fron) 0.093944 | Loss(Pos) -0.417021 | Loss(Cls) 0.890397 | Loss(Edge) 0.174712 | Loss(Real) 0.042948 | Loss(Fake) 0.168758  | Loss(Surf) 0.000000
-[2026-09-26 13:41:31,945::train::INFO] [Best] Iter 200 | val_loss 0.953737 -> ∏¸–¬ best.pt
+[2026-09-26 13:41:31,945::train::INFO] [Best] Iter 200 | val_loss 0.953737 -> Êõ¥Êñ∞ best.pt
 [2026-09-26 13:41:32,122::train::INFO] [Train] Iter 201 | Loss 2.931925 | Loss(Fron) 0.045707 | Loss(Pos) 2.218887 | Loss(Cls) 0.505221 | Loss(Edge) 0.000002 | Loss(Real) 0.008319 | Loss(Fake) 0.153788 | Loss(Surf) 0.000000  
 [2026-09-26 13:41:32,289::train::INFO] [Train] Iter 202 | Loss -3.048486 | Loss(Fron) 0.120626 | Loss(Pos) -3.683252 | Loss(Cls) 0.505267 | Loss(Edge) 0.004039 | Loss(Real) 0.000589 | Loss(Fake) 0.004245 | Loss(Surf) 0.000000  
 [2026-09-26 13:41:32,464::train::INFO] [Train] Iter 203 | Loss 5.267831 | Loss(Fron) 0.688241 | Loss(Pos) 2.575330 | Loss(Cls) 1.559307 | Loss(Edge) 0.072198 | Loss(Real) 0.234668 | Loss(Fake) 0.138088 | Loss(Surf) 0.000000  
@@ -406,7 +406,7 @@
 [2026-09-26 13:42:08,404::train::INFO] [Train] Iter 399 | Loss -0.837907 | Loss(Fron) 0.073311 | Loss(Pos) -1.947514 | Loss(Cls) 0.684903 | Loss(Edge) 0.165961 | Loss(Real) 0.002346 | Loss(Fake) 0.183087 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:08,594::train::INFO] [Train] Iter 400 | Loss -0.216578 | Loss(Fron) 0.063222 | Loss(Pos) -1.655225 | Loss(Cls) 0.979552 | Loss(Edge) 0.087162 | Loss(Real) 0.003547 | Loss(Fake) 0.305164 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:11,561::train::INFO] [Validate]  Iter 400 | Loss 0.855239 | Loss(Fron) 0.115595 | Loss(Pos) -0.386564 | Loss(Cls) 0.797699 | Loss(Edge) 0.123181 | Loss(Real) 0.027454 | Loss(Fake) 0.177874  | Loss(Surf) 0.000000
-[2026-09-26 13:42:11,903::train::INFO] [Best] Iter 400 | val_loss 0.855239 -> ∏¸–¬ best.pt
+[2026-09-26 13:42:11,903::train::INFO] [Best] Iter 400 | val_loss 0.855239 -> Êõ¥Êñ∞ best.pt
 [2026-09-26 13:42:12,083::train::INFO] [Train] Iter 401 | Loss 3.032149 | Loss(Fron) 0.113745 | Loss(Pos) 1.765067 | Loss(Cls) 0.924722 | Loss(Edge) 0.034176 | Loss(Real) 0.084120 | Loss(Fake) 0.110318 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:12,279::train::INFO] [Train] Iter 402 | Loss 3.549673 | Loss(Fron) 0.013843 | Loss(Pos) 2.410582 | Loss(Cls) 0.595887 | Loss(Edge) 0.132596 | Loss(Real) 0.013122 | Loss(Fake) 0.383643 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:12,470::train::INFO] [Train] Iter 403 | Loss 0.445978 | Loss(Fron) 0.091259 | Loss(Pos) -0.319782 | Loss(Cls) 0.594321 | Loss(Edge) 0.002093 | Loss(Real) 0.034777 | Loss(Fake) 0.043311 | Loss(Surf) 0.000000  
@@ -608,7 +608,7 @@
 [2026-09-26 13:42:47,517::train::INFO] [Train] Iter 599 | Loss 9.459896 | Loss(Fron) 0.108066 | Loss(Pos) 6.469507 | Loss(Cls) 1.505812 | Loss(Edge) 0.035585 | Loss(Real) 0.657117 | Loss(Fake) 0.683809 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:47,700::train::INFO] [Train] Iter 600 | Loss 0.818921 | Loss(Fron) 0.045648 | Loss(Pos) -0.319732 | Loss(Cls) 0.509615 | Loss(Edge) 0.001838 | Loss(Real) 0.061677 | Loss(Fake) 0.519875 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:50,523::train::INFO] [Validate]  Iter 600 | Loss 0.664518 | Loss(Fron) 0.080856 | Loss(Pos) -0.475820 | Loss(Cls) 0.700270 | Loss(Edge) 0.092086 | Loss(Real) 0.093487 | Loss(Fake) 0.173638  | Loss(Surf) 0.000000
-[2026-09-26 13:42:50,867::train::INFO] [Best] Iter 600 | val_loss 0.664518 -> ∏¸–¬ best.pt
+[2026-09-26 13:42:50,867::train::INFO] [Best] Iter 600 | val_loss 0.664518 -> Êõ¥Êñ∞ best.pt
 [2026-09-26 13:42:51,033::train::INFO] [Train] Iter 601 | Loss 3.511407 | Loss(Fron) 0.041030 | Loss(Pos) 0.575457 | Loss(Cls) 2.582703 | Loss(Edge) 0.000609 | Loss(Real) 0.020792 | Loss(Fake) 0.290816 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:51,192::train::INFO] [Train] Iter 602 | Loss 4.576504 | Loss(Fron) 0.001174 | Loss(Pos) 2.715454 | Loss(Cls) 1.028619 | Loss(Edge) 0.093639 | Loss(Real) 0.479313 | Loss(Fake) 0.258304 | Loss(Surf) 0.000000  
 [2026-09-26 13:42:51,367::train::INFO] [Train] Iter 603 | Loss -0.976715 | Loss(Fron) 0.060838 | Loss(Pos) -1.652340 | Loss(Cls) 0.562049 | Loss(Edge) 0.044464 | Loss(Real) 0.007310 | Loss(Fake) 0.000964 | Loss(Surf) 0.000000  
@@ -810,7 +810,7 @@
 [2026-09-26 13:43:28,575::train::INFO] [Train] Iter 799 | Loss 3.389718 | Loss(Fron) 0.000000 | Loss(Pos) 2.234946 | Loss(Cls) 0.567906 | Loss(Edge) 0.122740 | Loss(Real) 0.093190 | Loss(Fake) 0.370936 | Loss(Surf) 0.000000  
 [2026-09-26 13:43:28,753::train::INFO] [Train] Iter 800 | Loss 1.574253 | Loss(Fron) 0.346459 | Loss(Pos) -0.026831 | Loss(Cls) 0.809861 | Loss(Edge) 0.008729 | Loss(Real) 0.021552 | Loss(Fake) 0.414483 | Loss(Surf) 0.000000  
 [2026-09-26 13:43:31,627::train::INFO] [Validate]  Iter 800 | Loss -0.326290 | Loss(Fron) 0.074888 | Loss(Pos) -1.346906 | Loss(Cls) 0.751943 | Loss(Edge) 0.085645 | Loss(Real) 0.030259 | Loss(Fake) 0.077881  | Loss(Surf) 0.000000
-[2026-09-26 13:43:31,977::train::INFO] [Best] Iter 800 | val_loss -0.326290 -> ∏¸–¬ best.pt
+[2026-09-26 13:43:31,977::train::INFO] [Best] Iter 800 | val_loss -0.326290 -> Êõ¥Êñ∞ best.pt
 [2026-09-26 13:43:32,180::train::INFO] [Train] Iter 801 | Loss -2.424564 | Loss(Fron) 0.035696 | Loss(Pos) -3.306467 | Loss(Cls) 0.584929 | Loss(Edge) 0.102858 | Loss(Real) 0.001888 | Loss(Fake) 0.156532 | Loss(Surf) 0.000000  
 [2026-09-26 13:43:32,356::train::INFO] [Train] Iter 802 | Loss -1.246967 | Loss(Fron) 0.041703 | Loss(Pos) -1.892059 | Loss(Cls) 0.526841 | Loss(Edge) 0.034284 | Loss(Real) 0.007689 | Loss(Fake) 0.034574 | Loss(Surf) 0.000000  
 [2026-09-26 13:43:32,542::train::INFO] [Train] Iter 803 | Loss -0.037652 | Loss(Fron) 0.117104 | Loss(Pos) -0.675632 | Loss(Cls) 0.507471 | Loss(Edge) 0.000580 | Loss(Real) 0.003815 | Loss(Fake) 0.009011 | Loss(Surf) 0.000000  
@@ -1012,7 +1012,7 @@
 [2026-09-26 13:44:08,088::train::INFO] [Train] Iter 999 | Loss 4.136558 | Loss(Fron) 0.166240 | Loss(Pos) 2.551140 | Loss(Cls) 0.859699 | Loss(Edge) 0.153643 | Loss(Real) 0.186905 | Loss(Fake) 0.218930 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:08,277::train::INFO] [Train] Iter 1000 | Loss -4.191573 | Loss(Fron) 0.000416 | Loss(Pos) -4.744816 | Loss(Cls) 0.516707 | Loss(Edge) 0.000675 | Loss(Real) 0.001999 | Loss(Fake) 0.033445 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:11,083::train::INFO] [Validate]  Iter 1000 | Loss 0.735566 | Loss(Fron) 0.061343 | Loss(Pos) -0.419631 | Loss(Cls) 0.775302 | Loss(Edge) 0.131994 | Loss(Real) 0.062983 | Loss(Fake) 0.123574  | Loss(Surf) 0.000000
-[2026-09-26 13:44:11,250::train::INFO] [Best] Iter 1000 | val_loss 0.735566 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 1/6)
+[2026-09-26 13:44:11,250::train::INFO] [Best] Iter 1000 | val_loss 0.735566 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 1/6)
 [2026-09-26 13:44:11,431::train::INFO] [Train] Iter 1001 | Loss -3.216975 | Loss(Fron) 0.087601 | Loss(Pos) -3.815431 | Loss(Cls) 0.507951 | Loss(Edge) 0.000000 | Loss(Real) 0.001588 | Loss(Fake) 0.001316 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:11,620::train::INFO] [Train] Iter 1002 | Loss -1.292395 | Loss(Fron) 0.295516 | Loss(Pos) -2.350792 | Loss(Cls) 0.751244 | Loss(Edge) 0.000010 | Loss(Real) 0.006718 | Loss(Fake) 0.004909 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:11,792::train::INFO] [Train] Iter 1003 | Loss 5.096700 | Loss(Fron) 0.053066 | Loss(Pos) 3.614677 | Loss(Cls) 0.833158 | Loss(Edge) 0.236884 | Loss(Real) 0.058295 | Loss(Fake) 0.300620 | Loss(Surf) 0.000000  
@@ -1214,7 +1214,7 @@
 [2026-09-26 13:44:46,897::train::INFO] [Train] Iter 1199 | Loss -0.190698 | Loss(Fron) 0.054430 | Loss(Pos) -1.344326 | Loss(Cls) 0.963025 | Loss(Edge) 0.072923 | Loss(Real) 0.043024 | Loss(Fake) 0.020227 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:47,084::train::INFO] [Train] Iter 1200 | Loss 4.110869 | Loss(Fron) 0.109969 | Loss(Pos) 3.014345 | Loss(Cls) 0.617427 | Loss(Edge) 0.080623 | Loss(Real) 0.181398 | Loss(Fake) 0.107107 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:49,944::train::INFO] [Validate]  Iter 1200 | Loss 0.043364 | Loss(Fron) 0.054801 | Loss(Pos) -1.031574 | Loss(Cls) 0.773173 | Loss(Edge) 0.061674 | Loss(Real) 0.059610 | Loss(Fake) 0.125681  | Loss(Surf) 0.000000
-[2026-09-26 13:44:50,108::train::INFO] [Best] Iter 1200 | val_loss 0.043364 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 2/6)
+[2026-09-26 13:44:50,108::train::INFO] [Best] Iter 1200 | val_loss 0.043364 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 2/6)
 [2026-09-26 13:44:50,278::train::INFO] [Train] Iter 1201 | Loss -1.955180 | Loss(Fron) 0.011746 | Loss(Pos) -2.703030 | Loss(Cls) 0.682544 | Loss(Edge) 0.008062 | Loss(Real) 0.028312 | Loss(Fake) 0.017186 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:50,478::train::INFO] [Train] Iter 1202 | Loss -2.406245 | Loss(Fron) 0.039809 | Loss(Pos) -3.675574 | Loss(Cls) 1.085336 | Loss(Edge) 0.000001 | Loss(Real) 0.002543 | Loss(Fake) 0.141640 | Loss(Surf) 0.000000  
 [2026-09-26 13:44:50,655::train::INFO] [Train] Iter 1203 | Loss -0.378827 | Loss(Fron) 0.015296 | Loss(Pos) -0.916304 | Loss(Cls) 0.506360 | Loss(Edge) 0.000563 | Loss(Real) 0.014227 | Loss(Fake) 0.001030 | Loss(Surf) 0.000000  
@@ -1416,7 +1416,7 @@
 [2026-09-26 13:45:25,951::train::INFO] [Train] Iter 1399 | Loss 4.565735 | Loss(Fron) 0.213069 | Loss(Pos) 2.874314 | Loss(Cls) 0.595735 | Loss(Edge) 0.151045 | Loss(Real) 0.613736 | Loss(Fake) 0.117836 | Loss(Surf) 0.000000  
 [2026-09-26 13:45:26,129::train::INFO] [Train] Iter 1400 | Loss -3.017860 | Loss(Fron) 0.013099 | Loss(Pos) -3.610957 | Loss(Cls) 0.511672 | Loss(Edge) 0.000003 | Loss(Real) 0.001435 | Loss(Fake) 0.066888 | Loss(Surf) 0.000000  
 [2026-09-26 13:45:28,949::train::INFO] [Validate]  Iter 1400 | Loss 1.271812 | Loss(Fron) 0.087854 | Loss(Pos) 0.018756 | Loss(Cls) 0.814157 | Loss(Edge) 0.115610 | Loss(Real) 0.110582 | Loss(Fake) 0.124851  | Loss(Surf) 0.000000
-[2026-09-26 13:45:29,114::train::INFO] [Best] Iter 1400 | val_loss 1.271812 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 3/6)
+[2026-09-26 13:45:29,114::train::INFO] [Best] Iter 1400 | val_loss 1.271812 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 3/6)
 [2026-09-26 13:45:29,303::train::INFO] [Train] Iter 1401 | Loss 0.411595 | Loss(Fron) 0.034098 | Loss(Pos) -0.353130 | Loss(Cls) 0.551673 | Loss(Edge) 0.017707 | Loss(Real) 0.110807 | Loss(Fake) 0.050439 | Loss(Surf) 0.000000  
 [2026-09-26 13:45:29,490::train::INFO] [Train] Iter 1402 | Loss -2.190483 | Loss(Fron) 0.089684 | Loss(Pos) -3.959203 | Loss(Cls) 1.659773 | Loss(Edge) 0.000002 | Loss(Real) 0.002615 | Loss(Fake) 0.016647 | Loss(Surf) 0.000000  
 [2026-09-26 13:45:29,674::train::INFO] [Train] Iter 1403 | Loss -2.405118 | Loss(Fron) 0.230766 | Loss(Pos) -3.192931 | Loss(Cls) 0.524854 | Loss(Edge) 0.001792 | Loss(Real) 0.005710 | Loss(Fake) 0.024691 | Loss(Surf) 0.000000  
@@ -1618,7 +1618,7 @@
 [2026-09-26 13:46:04,425::train::INFO] [Train] Iter 1599 | Loss 0.279115 | Loss(Fron) 0.062529 | Loss(Pos) -0.626281 | Loss(Cls) 0.668070 | Loss(Edge) 0.142658 | Loss(Real) 0.018894 | Loss(Fake) 0.013246 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:04,600::train::INFO] [Train] Iter 1600 | Loss -0.040043 | Loss(Fron) 0.740879 | Loss(Pos) -2.036773 | Loss(Cls) 1.166218 | Loss(Edge) 0.005334 | Loss(Real) 0.084256 | Loss(Fake) 0.000043 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:07,493::train::INFO] [Validate]  Iter 1600 | Loss -0.110407 | Loss(Fron) 0.042484 | Loss(Pos) -1.160243 | Loss(Cls) 0.764162 | Loss(Edge) 0.115541 | Loss(Real) 0.032164 | Loss(Fake) 0.095485  | Loss(Surf) 0.000000
-[2026-09-26 13:46:07,674::train::INFO] [Best] Iter 1600 | val_loss -0.110407 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 4/6)
+[2026-09-26 13:46:07,674::train::INFO] [Best] Iter 1600 | val_loss -0.110407 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 4/6)
 [2026-09-26 13:46:07,849::train::INFO] [Train] Iter 1601 | Loss -0.126603 | Loss(Fron) 0.024032 | Loss(Pos) -0.927689 | Loss(Cls) 0.524225 | Loss(Edge) 0.000017 | Loss(Real) 0.228069 | Loss(Fake) 0.024742 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:08,021::train::INFO] [Train] Iter 1602 | Loss 1.135584 | Loss(Fron) 0.117990 | Loss(Pos) 0.233306 | Loss(Cls) 0.684162 | Loss(Edge) 0.039852 | Loss(Real) 0.019449 | Loss(Fake) 0.040823 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:08,183::train::INFO] [Train] Iter 1603 | Loss 0.067599 | Loss(Fron) 0.091521 | Loss(Pos) -1.216139 | Loss(Cls) 0.893092 | Loss(Edge) 0.008387 | Loss(Real) 0.282474 | Loss(Fake) 0.008263 | Loss(Surf) 0.000000  
@@ -1820,7 +1820,7 @@
 [2026-09-26 13:46:43,109::train::INFO] [Train] Iter 1799 | Loss 2.166464 | Loss(Fron) 0.252116 | Loss(Pos) 0.920673 | Loss(Cls) 0.607348 | Loss(Edge) 0.175523 | Loss(Real) 0.135750 | Loss(Fake) 0.075054 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:43,301::train::INFO] [Train] Iter 1800 | Loss -2.461661 | Loss(Fron) 0.027526 | Loss(Pos) -4.150216 | Loss(Cls) 1.611639 | Loss(Edge) 0.000109 | Loss(Real) 0.001225 | Loss(Fake) 0.048056 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:46,109::train::INFO] [Validate]  Iter 1800 | Loss 0.406160 | Loss(Fron) 0.056791 | Loss(Pos) -0.777498 | Loss(Cls) 0.751447 | Loss(Edge) 0.147178 | Loss(Real) 0.061556 | Loss(Fake) 0.166687  | Loss(Surf) 0.000000
-[2026-09-26 13:46:46,273::train::INFO] [Best] Iter 1800 | val_loss 0.406160 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 5/6)
+[2026-09-26 13:46:46,273::train::INFO] [Best] Iter 1800 | val_loss 0.406160 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 5/6)
 [2026-09-26 13:46:46,440::train::INFO] [Train] Iter 1801 | Loss -1.306686 | Loss(Fron) 0.004420 | Loss(Pos) -2.785878 | Loss(Cls) 1.412115 | Loss(Edge) 0.035440 | Loss(Real) 0.025917 | Loss(Fake) 0.001301 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:46,612::train::INFO] [Train] Iter 1802 | Loss -3.816785 | Loss(Fron) 0.022516 | Loss(Pos) -4.611989 | Loss(Cls) 0.687479 | Loss(Edge) 0.001416 | Loss(Real) 0.008315 | Loss(Fake) 0.075478 | Loss(Surf) 0.000000  
 [2026-09-26 13:46:46,785::train::INFO] [Train] Iter 1803 | Loss -0.043716 | Loss(Fron) 0.106647 | Loss(Pos) -0.809006 | Loss(Cls) 0.520122 | Loss(Edge) 0.000012 | Loss(Real) 0.000666 | Loss(Fake) 0.137843 | Loss(Surf) 0.000000  
@@ -2022,5 +2022,5 @@
 [2026-09-26 13:47:21,470::train::INFO] [Train] Iter 1999 | Loss -2.037220 | Loss(Fron) 0.001426 | Loss(Pos) -2.602174 | Loss(Cls) 0.515422 | Loss(Edge) 0.000132 | Loss(Real) 0.006101 | Loss(Fake) 0.041874 | Loss(Surf) 0.000000  
 [2026-09-26 13:47:21,648::train::INFO] [Train] Iter 2000 | Loss -0.768227 | Loss(Fron) 0.002847 | Loss(Pos) -1.600488 | Loss(Cls) 0.725559 | Loss(Edge) 0.009322 | Loss(Real) 0.015115 | Loss(Fake) 0.079419 | Loss(Surf) 0.000000  
 [2026-09-26 13:47:24,568::train::INFO] [Validate]  Iter 2000 | Loss -0.299955 | Loss(Fron) 0.076686 | Loss(Pos) -1.316143 | Loss(Cls) 0.751563 | Loss(Edge) 0.072227 | Loss(Real) 0.037530 | Loss(Fake) 0.078181  | Loss(Surf) 0.000000
-[2026-09-26 13:47:24,734::train::INFO] [Best] Iter 2000 | val_loss -0.299955 (◊Ó”≈ -0.326290 @ iter 800, ¡¨–¯Œ¥∏ƒ…∆ 6/6)
-[2026-09-26 13:47:24,734::train::INFO] [EarlyStop] ¡¨–¯ 6 ¥ŒŒ¥∏ƒ…∆, ”⁄ iter 2000 Õ£÷π; ◊Ó”≈ iter 800 (val_loss -0.326290), »®÷ÿº˚ logs\train_gpcr_ft_full_2026_09_26__13_40_50\checkpoints\best.pt
+[2026-09-26 13:47:24,734::train::INFO] [Best] Iter 2000 | val_loss -0.299955 (ÊúÄ‰ºò -0.326290 @ iter 800, ËøûÁª≠Êú™ÊîπÂñÑ 6/6)
+[2026-09-26 13:47:24,734::train::INFO] [EarlyStop] ËøûÁª≠ 6 Ê¨°Êú™ÊîπÂñÑ, ‰∫é iter 2000 ÂÅúÊ≠¢; ÊúÄ‰ºò iter 800 (val_loss -0.326290), ÊùÉÈáçËßÅ logs\train_gpcr_ft_full_2026_09_26__13_40_50\checkpoints\best.pt

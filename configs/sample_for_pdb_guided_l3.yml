@@ -17,4 +17,8 @@ sample:
     qed_w: 1.0
     sa_w: 1.0
     lam: 3
+    # 多样性惩罚权重。必须显式写在这里: src/sample_for_pdb.py 的代码默认是 0.0
+    # (缺省即关闭)。此前本模板缺这一行, 导致直接跑模板 -> 惩罚=0, 而走
+    # design.py/predict.py -> 惩罚=0.5, 两者行为不一致。现统一为 0.5。
+    diversity_w: 0.5
   relax_output: true

@@ -48,6 +48,8 @@ from paths import src_on_path  # noqa: E402
 src_on_path()
 
 CLASH_MAX = 0.5      # 与 diagnose_dataset.py 的 LIGAND_CLASH_POCKET 同判据
+DIVERSITY_W = 0.5    # 与 configs/sample_for_pdb_guided_l3.yml 及 design.py/predict.py
+                     # 的 --diversity-w 默认值保持一致, 保证 A/B 与出货目标同源。
 
 
 def pick_candidates(run_dir, topk):
@@ -94,6 +96,16 @@ def evaluate_ckpt(ckpt, target, num_samples, beam, max_steps, seed, device, work
     c["sample"]["num_samples"] = num_samples
     c["sample"]["beam_size"] = beam
     c["sample"]["max_steps"] = max_steps
+    # 评测目标必须与出货目标一致: 显式固定引导项, 不依赖模板是否恰好写了这些键。
+    # 历史缺陷: 本函数只覆盖 ckpt/seed/num_samples/beam/max_steps, diversity_w 沿用
+    # 模板 -> 模板缺键时取代码默认 0.0, 于是 A/B 在"无多样性惩罚"下评测, 而药库在
+    # 0.5 下生成, 评测目标 != 出货目标。
+    g = c["sample"].setdefault("guided", {})
+    g["enabled"] = True
+    g.setdefault("qed_w", 1.0)
+    g.setdefault("sa_w", 1.0)
+    g.setdefault("lam", 3)
+    g["diversity_w"] = float(DIVERSITY_W)
     yaml.safe_dump(c, open(cfg, "w", encoding="utf-8"), allow_unicode=True, sort_keys=False)
 
     reg = json.load(open(os.path.join(CONFIGS, "targets.json"), encoding="utf-8"))

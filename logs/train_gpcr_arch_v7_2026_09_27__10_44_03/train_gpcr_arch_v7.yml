@@ -1,0 +1,118 @@
+# ==========================================================================
+# 微调配方 v7 —— 架构线第 1 步: **解冻编码器 + 分层学习率**(单变量实验)
+#
+# 为什么做这一步
+# --------------
+# 实测参数量分解(models/7-eonmol_ft_gpcr_v2.pt, 总计 3.712 M):
+#     encoder        2.984 M   80.4 %   <- 此前 5 次微调**全部冻结**, 从未改变
+#     field          0.422 M   11.4 %
+#     pos_predictor  0.241 M    6.5 %
+#     frontier_pred  0.053 M    1.4 %
+# 即: 此前所谓"微调"只训了 0.728 M(19.6 %), 做的是**头部适配**, 模型表征能力
+# 根本没有被改动 —— 这正是"模型本身不够强"的结构性原因。
+#
+# 为什么不直接整体解冻
+# --------------------
+# 单纯解冻并统一学习率会让 80 % 的参数用同一步长更新, 极易冲掉预训练表征;
+# 此前 v3b(全网络解冻, lr 2e-5)只完成 7 个分子 —— 但那次用的是
+# data/gpcr_ft_v3(1.04 样本/口袋), 根因被"停止策略不可学"混淆, 不能据此断定
+# 解冻不可行。正确做法是**分层学习率**: 编码器小步慢adapt, 头部维持原步长。
+#
+# 本配置相对 v6 的**唯一变量**: freeze_encoder 由 true 改为 false,
+# 并给 encoder 单独设置 1e-5 的学习率(头部仍是 v6 的 1e-4)。
+# frontier_pred 保持 128/32 并沿用 v2 权重 —— 见 configs/train_gpcr_arch_v8.yml
+# 才动它的容量, 以保证两次实验各自只有一个变量。
+#
+# 数据: data/gpcr_dock_v1 (307 对 / 4 口袋 / 40-127 样本每口袋 / 零穿模)
+# 起点: models/7-eonmol_ft_gpcr_v2.pt (我们已晋级的权重), 而非官方权重
+# ==========================================================================
+
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+  # frontier_pred 保持官方容量(128/32/1 层) -> 参数名与形状和 v2 完全一致,
+  # 可直接加载, 不发生随机初始化。
+  frontier:
+    hidden_sca: 128
+    hidden_vec: 32
+    layers: 1
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/7-eonmol_ft_gpcr_v2.pt
+
+  batch_size: 1
+  grad_accum: 8                 # 有效 batch = 8
+  num_workers: 0
+  pin_memory: false
+
+  max_iters: 6000
+  val_freq: 200
+  early_stop_patience: 6
+  early_stop_min_iters: 1200
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  # ==== 本实验的核心改动 ====
+  freeze_encoder: false         # v6 为 true; 这里解冻 80.4 % 的参数
+  optimizer:
+    type: adam
+    lr: 1.e-4                   # 头部(=未匹配下列 pattern 的参数)保持 v6 步长
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+    param_groups:
+      - {pattern: encoder, lr: 1.e-5}   # 编码器小步慢adapt, 保护预训练表征
+
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      min_num_unmasked: 1        # 必须 >=1, 否则全掩码 -> context 为空 -> NaN
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+dataset:
+  name: pl
+  path: ./data/gpcr_dock_v1
+  split: ./data/gpcr_dock_v1/split_by_name.pt

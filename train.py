@@ -134,7 +134,34 @@ if __name__ == '__main__':
         if init_checkpoint:
             logger.info('Loading initialization checkpoint: %s' % init_checkpoint)
             checkpoint = torch.load(init_checkpoint, map_location=args.device)
-            model.load_state_dict(checkpoint['model'])
+            if config.train.get('init_strict', True):
+                model.load_state_dict(checkpoint['model'])
+            else:
+                # 扩容架构(frontier_pred 变大/变深)后, 官方权重里该模块的形状不再匹配。
+                # 注意: PyTorch 的 strict=False **不会**容忍形状不匹配(它只容忍键缺失/多余),
+                # 形状不一致会直接抛 RuntimeError, 因此必须先把这些张量**显式剔除**。
+                # 这里只允许 frontier_pred 的差异; 其余任何形状/键差异都说明加载出了真问题,
+                # 必须报错而不是静默随机初始化(否则等于悄悄丢掉预训练权重)。
+                sd = dict(checkpoint['model'])
+                cur = model.state_dict()
+                dropped = [k for k, v in sd.items()
+                           if k in cur and tuple(v.shape) != tuple(cur[k].shape)]
+                bad_d = [k for k in dropped if 'frontier_pred' not in k]
+                if bad_d:
+                    raise RuntimeError('init_strict=false 只允许 frontier_pred 形状差异, '
+                                       '但发现其他形状不匹配: %s' % bad_d[:8])
+                for k in dropped:
+                    sd.pop(k)
+                missing, unexpected = model.load_state_dict(sd, strict=False)
+                bad_m = [k for k in missing if 'frontier_pred' not in k]
+                bad_u = [k for k in unexpected if 'frontier_pred' not in k]
+                if bad_m or bad_u:
+                    raise RuntimeError(
+                        'init_strict=false 只允许 frontier_pred 张量差异, 但发现其他差异: '
+                        'missing=%s unexpected=%s' % (bad_m[:8], bad_u[:8]))
+                logger.info('init_strict=false: frontier_pred 重新随机初始化 '
+                            '(剔除形状不符 %d 个, 未加载 %d 个, 忽略旧张量 %d 个)'
+                            % (len(dropped), len(missing), len(unexpected)))
         if config.train.get('freeze_encoder', False):
             for parameter in model.encoder.parameters():
                 parameter.requires_grad = False
@@ -157,6 +184,15 @@ if __name__ == '__main__':
 
     # Optimizer and scheduler
     optimizer = get_optimizer(config.train.optimizer, model)
+    # 打印每个参数组的真实学习率与规模 —— 分层 LR 若 pattern 写错会静默退化成单组,
+    # 必须在日志里可见, 否则又是一次"以为改了、其实没改"。
+    _trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    logger.info('可训练参数: %.3f M / %.3f M'
+                % (_trainable / 1e6, sum(p.numel() for p in model.parameters()) / 1e6))
+    for gi, g in enumerate(optimizer.param_groups):
+        n = sum(p.numel() for p in g['params'])
+        logger.info('  参数组 %d: lr=%.2e  参数 %.3f M (%d 个张量)'
+                    % (gi, g['lr'], n / 1e6, len(g['params'])))
     scheduler = get_scheduler(config.train.scheduler, optimizer)
     if config.train.use_apex:
         model, optimizer = amp.initialize(model, optimizer, opt_level='O1')
