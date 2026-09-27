@@ -75,7 +75,8 @@ def pick_candidates(run_dir, topk):
     return out
 
 
-def evaluate_ckpt(ckpt, target, num_samples, beam, max_steps, seed, device, workdir):
+def evaluate_ckpt(ckpt, target, num_samples, beam, max_steps, seed, device, workdir,
+                  frontier_threshold=0.0):
     """跑一次生成并对产物计算指标; 返回 dict。"""
     from rdkit import Chem, RDLogger
     from rdkit.Chem import QED, AllChem
@@ -106,6 +107,11 @@ def evaluate_ckpt(ckpt, target, num_samples, beam, max_steps, seed, device, work
     g.setdefault("sa_w", 1.0)
     g.setdefault("lam", 3)
     g["diversity_w"] = float(DIVERSITY_W)
+    # frontier 判定阈值: 决定"何时停", 直接控制分子大小。
+    # 键名是 frontier_threshold(新接通的), **不是** focal_threshold ——
+    # 后者是原版 sample.py 的 focal 概率阈值, 对 frontier 判定完全无效
+    # (实测把 focal_threshold 从 0.5 改到 0.1 产出逐位相同)。
+    c["sample"].setdefault("threshold", {})["frontier_threshold"] = float(frontier_threshold)
     yaml.safe_dump(c, open(cfg, "w", encoding="utf-8"), allow_unicode=True, sort_keys=False)
 
     reg = json.load(open(os.path.join(CONFIGS, "targets.json"), encoding="utf-8"))
@@ -187,6 +193,10 @@ def main():
     ap.add_argument("--max-steps", type=int, default=30)
     ap.add_argument("--seed", type=int, default=2024, help="所有候选必须用同一种子")
     ap.add_argument("--device", default="cuda")
+    ap.add_argument("--frontier-threshold", type=float, default=0.0,
+                    help="frontier 判定阈值(决定何时停, 直接控制分子大小); 默认 0 与官方行为一致。"
+                         "注意与 focal_threshold 不同 —— 后者是原版 sample.py 的 focal 概率阈值, "
+                         "对 frontier 判定完全无效。")
     ap.add_argument("--rank-by", default="qed",
                     choices=["qed", "clash", "both"],
                     help="排序依据: qed=QED 中位降序; clash=穿模率升序; both=先穿模率后 QED")
@@ -221,11 +231,13 @@ def main():
             # 可直接交给 src/scripts/judge_promotion.py 做晋级判定
             wd = ensure_dir(os.path.join(args.keep_dir, os.path.splitext(os.path.basename(ckpt))[0]))
             r = evaluate_ckpt(ckpt, args.target, args.num_samples, args.beam,
-                              args.max_steps, args.seed, args.device, wd)
+                              args.max_steps, args.seed, args.device, wd,
+                              args.frontier_threshold)
         else:
             with tempfile.TemporaryDirectory(prefix="ckptsel_") as wd:
                 r = evaluate_ckpt(ckpt, args.target, args.num_samples, args.beam,
-                                  args.max_steps, args.seed, args.device, wd)
+                                  args.max_steps, args.seed, args.device, wd,
+                                  args.frontier_threshold)
         r["val_loss"] = vloss
         r["iter"] = it
         r["run_dir"] = os.path.relpath(

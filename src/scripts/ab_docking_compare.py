@@ -83,11 +83,16 @@ def run(cmd, logf):
         return subprocess.run(cmd, cwd=ROOT, stdout=lf, stderr=subprocess.STDOUT).returncode
 
 
-def gen_one(ckpt, target, n, beam, steps, seed, keep_dir):
-    """生成 -> 返回该检查点本次的 session 目录。"""
+def gen_one(ckpt, target, n, beam, steps, seed, keep_dir, frontier_threshold=0.0):
+    """生成 -> 返回该检查点本次的 session 目录。
+
+    frontier_threshold 会透传给 select_ckpt_by_generation.py 并写进 cfg ——
+    这样本工具不仅能比较**检查点**, 也能比较**采样校准参数**(阈值直接控制分子大小)。
+    """
     rc = run([sys.executable, SELECT, "--ckpts", ckpt, "--target", target,
               "--num-samples", str(n), "--beam", str(beam), "--max-steps", str(steps),
               "--seed", str(seed), "--rank-by", "both", "--keep-dir", keep_dir,
+              "--frontier-threshold", str(frontier_threshold),
               "--out", os.path.join(keep_dir, "gen_metrics.csv")],
              os.path.join(keep_dir, "run.log"))
     if rc != 0:
@@ -171,6 +176,10 @@ def main():
     ap.add_argument("--seeds", nargs="+", type=int, default=[2024, 2025])
     ap.add_argument("--parallel", type=int, default=6)
     ap.add_argument("--exhaustiveness", type=int, default=4)
+    ap.add_argument("--frontier-threshold", type=float, default=0.0,
+                    help="frontier 判定阈值, 透传给生成阶段。用它可以把 A/B 从"
+                         "\"比较检查点\"扩展到\"比较采样校准\"(阈值直接控制分子大小, "
+                         "而 Vina 打分与尺寸强相关)。默认 0 与官方行为一致。")
     ap.add_argument("--work", default=os.path.join(ROOT, "outputs", "ab_docking"))
     ap.add_argument("--out", default=os.path.join(ROOT, "outputs", "ab_docking.csv"))
     args = ap.parse_args()
@@ -223,7 +232,8 @@ def main():
                 wd = ensure_dir(os.path.join(args.work, "%s_s%d" % (name, seed)))
                 t0 = time.time()
                 log("\n[%s | 种子 %d] 生成中 ..." % (name, seed))
-                sess = gen_one(ckpt, args.target, args.n, args.beam, args.max_steps, seed, wd)
+                sess = gen_one(ckpt, args.target, args.n, args.beam, args.max_steps, seed, wd,
+                               args.frontier_threshold)
                 if sess is None:
                     log("  生成失败, 跳过")
                     continue
