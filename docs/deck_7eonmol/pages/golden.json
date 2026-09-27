@@ -1,0 +1,24 @@
+{
+ "components": [
+  {
+   "type": "kpi_cards",
+   "items": [
+    {
+     "value": "800+",
+     "label": "GPCR 家族成员",
+     "source": "人类基因组中最大的膜受体家族"
+    },
+    {
+     "value": "~40%",
+     "label": "上市小分子药物作用于 GPCR",
+     "source": "最大药物靶点超家族"
+    },
+    {
+     "value": "50-100",
+     "label": "有共晶配体、可立即服务",
+     "source": "本项目的最佳服务区间"
+    }
+   ]
+  }
+ ]
+}

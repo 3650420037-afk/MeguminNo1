@@ -1,0 +1,160 @@
+{
+ "version": "1",
+ "filename": "7-eonmol_项目展示.pptx",
+ "narrative": {
+  "strategy": "pyramid",
+  "pacing": "balanced",
+  "audience": "executive"
+ },
+ "theme": "eonmol",
+ "meta": {
+  "organization": "全球大学生生命科学挑战赛 · 赛道3 离子通道/GPCR 虚拟筛选 · 子任务2",
+  "date": "7-eonmol 项目展示"
+ },
+ "pages": [
+  {
+   "id": "cover",
+   "type": "cover",
+   "heading": "7-eonmol：口袋引导的 GPCR 靶向分子生成",
+   "summary": "等变图神经网络 + 引导束搜索 · 自有微调权重 · 类药化合物库"
+  },
+  {
+   "id": "s01",
+   "type": "chapter",
+   "heading": "01 背景与思路",
+   "summary": "GPCR 是最大的成药靶点家族，也是生成式分子设计最难啃的骨头"
+  },
+  {
+   "id": "golden",
+   "type": "content",
+   "kind": "data",
+   "heading": "GPCR 是最大的成药靶点家族"
+  },
+  {
+   "id": "bottleneck",
+   "type": "content",
+   "kind": "list",
+   "heading": "三重瓶颈，正是三个改进靶点"
+  },
+  {
+   "id": "task",
+   "type": "content",
+   "kind": "evidence",
+   "heading": "任务解读：四个关键词 = 四份证据"
+  },
+  {
+   "id": "positioning",
+   "type": "content",
+   "kind": "statement",
+   "heading": "造引擎，不挖矿"
+  },
+  {
+   "id": "baseline",
+   "type": "content",
+   "kind": "data",
+   "heading": "基线：Pocket2Mol 等变图神经网络"
+  },
+  {
+   "id": "guided",
+   "type": "content",
+   "kind": "comparison",
+   "heading": "核心创新：引导束搜索"
+  },
+  {
+   "id": "ftstory",
+   "type": "content",
+   "kind": "process",
+   "heading": "自训权重：从连续失败到双种子晋级"
+  },
+  {
+   "id": "ftab",
+   "type": "content",
+   "kind": "data",
+   "heading": "双种子严格 A/B：两轮均判 PROMOTED"
+  },
+  {
+   "id": "density",
+   "type": "content",
+   "kind": "process",
+   "heading": "决定成败的不是数据总量，是每口袋样本密度"
+  },
+  {
+   "id": "s02",
+   "type": "chapter",
+   "heading": "02 效果展示",
+   "summary": "四靶点、一万次生成：用可复核的数字说话"
+  },
+  {
+   "id": "scale",
+   "type": "content",
+   "kind": "data",
+   "heading": "四靶点：10,004 生成 → 6,864 入库"
+  },
+  {
+   "id": "quality",
+   "type": "content",
+   "kind": "data",
+   "heading": "主库质量画像（A2A，n=2,931）"
+  },
+  {
+   "id": "qedup",
+   "type": "content",
+   "kind": "quote",
+   "heading": "关键证据：A2A 主库类药性"
+  },
+  {
+   "id": "dock",
+   "type": "content",
+   "kind": "data",
+   "heading": "全库虚拟筛选：均值 −9.68 kcal/mol"
+  },
+  {
+   "id": "novelty",
+   "type": "content",
+   "kind": "evidence",
+   "heading": "新颖性：Top50 全部高新颖"
+  },
+  {
+   "id": "reverse",
+   "type": "content",
+   "kind": "comparison",
+   "heading": "逆向阳性对照：管线可信，生成更优"
+  },
+  {
+   "id": "general",
+   "type": "content",
+   "kind": "data",
+   "heading": "跨靶点通用性：四靶点同一管线"
+  },
+  {
+   "id": "s03",
+   "type": "chapter",
+   "heading": "03 使用 · 作用 · 前景",
+   "summary": "把引擎交到使用者手里：怎么用、值多少、下一步去哪"
+  },
+  {
+   "id": "usecase",
+   "type": "content",
+   "kind": "comparison",
+   "heading": "桌面应用与一键入口"
+  },
+  {
+   "id": "value",
+   "type": "content",
+   "kind": "list",
+   "heading": "价值、诚信与边界"
+  },
+  {
+   "id": "matrix",
+   "type": "content",
+   "kind": "comparison",
+   "heading": "赛道瓶颈 → 我们的方案 → 量化证据"
+  },
+  {
+   "id": "ending",
+   "type": "ending",
+   "heading": "把发现分子的能力，交给每一个拥有口袋结构与一块 GPU 的人",
+   "summary": "全球大学生生命科学挑战赛 · 赛道3 离子通道/GPCR 小分子药物虚拟筛选 · 子任务2"
+  }
+ ]
+}

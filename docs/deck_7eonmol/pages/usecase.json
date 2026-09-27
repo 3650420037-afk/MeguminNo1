@@ -1,0 +1,51 @@
+{
+ "components": [
+  {
+   "type": "data_table",
+   "columns": [
+    {
+     "key": "t",
+     "label": "界面标签页"
+    },
+    {
+     "key": "d",
+     "label": "它能做什么"
+    }
+   ],
+   "rows": [
+    {
+     "cells": {
+      "t": "生成分子",
+      "d": "下拉选靶点，自动载入口袋中心；一键开始，进度实时更新"
+     }
+    },
+    {
+     "cells": {
+      "t": "候选库浏览",
+      "d": "按类药分排序，点击渲染 2D 结构，一键导出 3D SDF"
+     }
+    },
+    {
+     "cells": {
+      "t": "分析结果",
+      "d": "对接、ADMET、选择性等评估结果直接查看"
+     }
+    },
+    {
+     "cells": {
+      "t": "环境设置",
+      "d": "内置环境自检；使用说明在顶栏 ? 弹窗，冷启动约 2.6 秒"
+     }
+    },
+    {
+     "cells": {
+      "t": "命令行入口",
+      "d": "design.py 生成 · predict.py 出候选 · train.py 训练"
+     },
+     "emphasis": "total"
+    }
+   ],
+   "source": "交付结构按大赛模板（src / models / data / notebooks / results），无硬编码绝对路径"
+  }
+ ]
+}

@@ -1,0 +1,29 @@
+{
+ "components": [
+  {
+   "type": "kpi_cards",
+   "items": [
+    {
+     "value": "2,931",
+     "label": "全库对接成功",
+     "source": "成功率 100%"
+    },
+    {
+     "value": "−9.68",
+     "label": "平均打分 kcal/mol",
+     "source": "范围 −13.51 ~ −5.92"
+    },
+    {
+     "value": "1,137",
+     "label": "强结合 ≤ −10",
+     "source": "占 38.8%"
+    },
+    {
+     "value": "311",
+     "label": "极强 ≤ −11",
+     "source": "占 10.6%"
+    }
+   ]
+  }
+ ]
+}

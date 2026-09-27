@@ -1,0 +1,45 @@
+{
+ "components": [
+  {
+   "type": "data_table",
+   "columns": [
+    {
+     "key": "k",
+     "label": "对照项"
+    },
+    {
+     "key": "v",
+     "label": "结果"
+    }
+   ],
+   "rows": [
+    {
+     "cells": {
+      "k": "对照集",
+      "v": "737 个已知 A2A 高活性分子（362 个骨架）"
+     }
+    },
+    {
+     "cells": {
+      "k": "最大 Tanimoto 相似度",
+      "v": "0.187 – 0.321，全部 < 0.32"
+     }
+    },
+    {
+     "cells": {
+      "k": "骨架重合",
+      "v": "0（零重合）"
+     }
+    },
+    {
+     "cells": {
+      "k": "判级",
+      "v": "Top50 全部 HIGH NOVEL"
+     },
+     "emphasis": "highlight"
+    }
+   ],
+   "source": "结构新颖与类药特征两项核心要求同时满足"
+  }
+ ]
+}

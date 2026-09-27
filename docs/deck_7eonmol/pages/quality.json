@@ -1,0 +1,29 @@
+{
+ "components": [
+  {
+   "type": "kpi_cards",
+   "items": [
+    {
+     "value": "0.825",
+     "label": "QED 中位（最高 0.946）",
+     "source": "76% 的分子 QED ≥ 0.8"
+    },
+    {
+     "value": "3.33",
+     "label": "SA 中位",
+     "source": "全部落在可合成区间 1.5–5.9"
+    },
+    {
+     "value": "1,960",
+     "label": "唯一 Murcko 骨架",
+     "source": "化学空间覆盖广，未塌缩"
+    },
+    {
+     "value": "362 Da",
+     "label": "MW 中位",
+     "source": "口服药物甜区"
+    }
+   ]
+  }
+ ]
+}
