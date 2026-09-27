@@ -48,6 +48,21 @@ def verify(name):
     print("consistency=%s" % ("OK" if not (dup or not_in_index or not_in_split) else "MISMATCH"))
     pockets = sorted({item[0] for item in entries})
     print("pocket_files=%s" % pockets)
+    # 每口袋样本密度 —— 这是微调成败的**决定性**指标(实测 1.04 样本/口袋会让停止策略
+    # 不可学、分子永不终止; 40-127/口袋则恢复正常)。旧版只报总对数, 会掩盖
+    # "总量很大但每口袋只有 1 条"这种致命分布; 因此必须显式报出来。
+    per_pocket = {}
+    for item in entries:
+        per_pocket[item[0]] = per_pocket.get(item[0], 0) + 1
+    if per_pocket:
+        vals = sorted(per_pocket.values())
+        print("per_pocket_density: n_pockets=%d min=%d median=%d max=%d"
+              % (len(vals), vals[0], vals[len(vals) // 2], vals[-1]))
+        for pk in sorted(per_pocket, key=lambda k: -per_pocket[k])[:12]:
+            print("    %-40s %5d" % (pk, per_pocket[pk]))
+        if len(vals) > 1 and vals[0] <= 5:
+            print("  WARN: 存在每口袋 <=5 个样本的口袋 (%d 个) —— 该分布曾导致停止策略不可学"
+                  % sum(1 for v in vals if v <= 5))
     report_path = os.path.join(path, "build_report.txt")
     if os.path.isfile(report_path):
         with open(report_path, "r", encoding="utf-8") as handle:
@@ -65,8 +80,12 @@ def verify(name):
 
 
 def main():
+    # 允许显式指定数据集, 这样新建的数据集(如 gpcr_mass_v1)不必改源码就能校验 ——
+    # 旧版把清单写死在源码里, 新数据集只能靠改代码才能验证, 容易漏检。
+    args = sys.argv[1:]
+    names = args if args else DATASETS
     failed = 0
-    for name in DATASETS:
+    for name in names:
         try:
             verify(name)
         except Exception as error:
