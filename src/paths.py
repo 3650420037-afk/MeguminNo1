@@ -50,11 +50,24 @@ DRUGLIB = os.path.join(DATA, "druglib")
 
 # ---------------------------------------------------------------- 权重
 PRETRAINED = os.path.join(MODELS, "pretrained_Pocket2Mol.pt")
-# 本项目自训的权重(见 docs/微调实验_v3_报告.md 与 ModelCard.md)。
-# 注意措辞: 它最初在 diversity_w=0 下判为晋级, 但在**出货目标**(diversity_w=0.5)下
-# 复验晋级不成立(QED 两个种子都更低, 仅口袋叠合度一致更好)。不要写成"已晋级"。
-# 存在时作为默认; 不存在则回退到官方权重, 保证任何时候都能跑
-FINETUNED = os.path.join(MODELS, "7-eonmol_ft_gpcr_v2.pt")
+
+# 交付权重 v3 = 架构实验 v8 的 iter 800(解冻 encoder + 扩容 frontier_pred)。
+# 晋级依据(全部在**出货目标** diversity_w=0.5 下、A2A、同种子成对、双种子):
+#   - 结合强度(第一优化轴): **与官方基线打平**(Vina 中位差 -0.04 / -0.03, 远小于
+#     同臂运行间噪声 ~0.14), 且 <=-10 占比两个种子都更高(36.5% vs 35.8%; 60.0% vs 55.7%);
+#   - QED 中位两个种子都更高(+0.065 / +0.082)、SA 两个种子都更低(更好)、
+#     骨架数打平或更多(47/47 与 55/39)、穿模率两个种子均为 0%;
+#   - 完成数相当(64/63 与 60/61) -> 停止策略健康。
+# 因此它是目前唯一在所有已测轴向上都不劣于官方权重、且多项更优的模型。
+# ⚠ 局限: 对接验证仅 A2A 一个靶点、每臂 50-60 个分子; 不得宣称"结合强度更强"。
+# ⚠ 架构随权重走: v3 的 frontier 容量为 256/64/2, 记录在权重文件自己的 config 里,
+#   sample_for_pdb.py 正是按 ckpt['config'].model 构建模型, 故可直接加载。
+#
+# 历史权重(保留供对照, 勿删):
+#   - 7-eonmol_ft_gpcr_v2.pt: 原判"晋级", 但在出货目标下**双种子结合强度与 QED 都更差**,
+#     已判 NOT_PROMOTED(见 ModelCard.md); 保留供复现该结论。
+#   - 7-eonmol_ft_gpcr_v1.pt: 早期权重, 未晋级。
+FINETUNED = os.path.join(MODELS, "7-eonmol_ft_gpcr_v3.pt")
 DEFAULT_CKPT = FINETUNED if os.path.exists(FINETUNED) else PRETRAINED
 
 # ---------------------------------------------------------------- 外部程序

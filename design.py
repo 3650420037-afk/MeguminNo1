@@ -111,10 +111,11 @@ def main():
     ap.add_argument("--config", default=DEFAULT_TEMPLATE, help="采样配置模板")
     ap.add_argument("--ckpt", default=None,
                     help="自定义模型权重路径; 默认用本项目自训的 "
-                         "models/7-eonmol_ft_gpcr_v2.pt(不存在时回退官方权重)。"
-                         "注意: 该权重最初在 diversity_w=0 下判为晋级, 但在出货目标"
-                         "(diversity_w=0.5)下复验**晋级不成立**(见 ModelCard.md); "
-                         "想跑官方基线请显式传 models/pretrained_Pocket2Mol.pt")
+                         "models/7-eonmol_ft_gpcr_v3.pt(解冻编码器 + 扩容终止模块; "
+                         "在出货目标下与官方权重的结合强度打平, 且 QED/SA/骨架多样性更好。"
+                         "见 ModelCard.md)。想跑官方基线请显式传 "
+                         "models/pretrained_Pocket2Mol.pt; 想复现旧结论可传 "
+                         "models/7-eonmol_ft_gpcr_v2.pt")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()

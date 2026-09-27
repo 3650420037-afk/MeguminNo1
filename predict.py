@@ -42,11 +42,13 @@ from paths import (ROOT, CONFIGS, DATA, KNOWN_DRUGS, OUTPUTS, PRETRAINED,  # noq
                    DEFAULT_CKPT, RESULTS, ensure_dir, missing_hint)
 
 MODEL_NAME = "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)"
-# 措辞纪律: 该权重最初在 diversity_w=0 下判为晋级, 但在**出货目标**(diversity_w=0.5)
-# 下复验晋级不成立(QED 两个种子都更低, 仅口袋叠合度一致更好)。
-# 这里**不得**再写"已晋级" —— 该字段会写进 results.csv 对外交付。
-MODEL_VERSION = ("7-eonmol_ft_gpcr_v2.pt — 本项目自训; 在 diversity_w=0 下晋级, "
-                 "但在出货目标(diversity_w=0.5)下复验未通过晋级判据(见 ModelCard.md); "
+# 措辞纪律(会写进 results.csv 对外交付): v3 = 解冻编码器 + 扩容 frontier_pred。
+# 在**出货目标**(diversity_w=0.5)下、A2A、同种子成对、双种子:
+#   结合强度与官方基线**打平**(Vina 中位差 -0.04/-0.03, 小于噪声 ~0.14),
+#   QED/SA 两个种子都更好, 骨架数打平或更多, 穿模率均为 0%。
+# **不得**写成"结合强度更强" —— 只是不劣。
+MODEL_VERSION = ("7-eonmol_ft_gpcr_v3.pt — 本项目自训; 出货目标下与官方权重的结合强度"
+                 "打平(A2A 双种子), 类药性 QED/SA 与骨架多样性更优; "
                  "基线为 ICML 2022 官方权重")
 CODE_VERSION = "7-eonmol-competition-submission"
 
