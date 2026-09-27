@@ -42,7 +42,11 @@ from paths import (ROOT, CONFIGS, DATA, KNOWN_DRUGS, OUTPUTS, PRETRAINED,  # noq
                    DEFAULT_CKPT, RESULTS, ensure_dir, missing_hint)
 
 MODEL_NAME = "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)"
-MODEL_VERSION = ("7-eonmol_ft_gpcr_v2.pt — 本项目自训, 经两轮 A/B(种子 2024/2025)晋级; "
+# 措辞纪律: 该权重最初在 diversity_w=0 下判为晋级, 但在**出货目标**(diversity_w=0.5)
+# 下复验晋级不成立(QED 两个种子都更低, 仅口袋叠合度一致更好)。
+# 这里**不得**再写"已晋级" —— 该字段会写进 results.csv 对外交付。
+MODEL_VERSION = ("7-eonmol_ft_gpcr_v2.pt — 本项目自训; 在 diversity_w=0 下晋级, "
+                 "但在出货目标(diversity_w=0.5)下复验未通过晋级判据(见 ModelCard.md); "
                  "基线为 ICML 2022 官方权重")
 CODE_VERSION = "7-eonmol-competition-submission"
 

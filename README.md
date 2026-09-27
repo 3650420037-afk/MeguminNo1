@@ -5,12 +5,16 @@
 [Pocket2Mol](https://arxiv.org/abs/2205.07249)（ICML 2022）用等变图神经网络做口袋条件的三维分子生成。
 本仓库在此基础上做了**两件事**：① 用"引导束搜索"把生成分布推向类药区域；
 ② 在自建的 GPCR 数据上**微调出本项目自己的权重**（`models/7-eonmol_ft_gpcr_v2.pt`，
-经种子 2024/2025 双轮 A/B 晋级，已作为默认模型），并配套了从口袋结构到候选分子的
+已作为默认模型；其"晋级"结论已在 2026-09-27 被修正 —— 见下方核心数字与
+[`ModelCard.md`](./ModelCard.md)），并配套了从口袋结构到候选分子的
 **全自动、可追溯**流水线。
 
 **核心数字**（均可用仓库内脚本重算）：
 - 引导束搜索使 QED 中位从 0.667 提升到 **0.803（+20%）**；
-- **自训权重双轮 A/B 晋级**：SA 与口袋叠合度稳定优于官方权重，QED 与分子数与之相当；
+- **自训权重的"晋级"结论已修正**：原 A/B 是在 `diversity_w = 0`（无多样性惩罚）下做的，
+  而**出货药库用的是 0.5**。在出货目标下复验，**晋级不成立** —— QED 两个种子都更低
+  （−0.084 / −0.028），一致更好的只有**口袋叠合度**，穿模率两个种子都略差，
+  完成数相当（**停止策略稳定**，这是本轮最重要的正面结果）。详见 [`ModelCard.md`](./ModelCard.md)；
 - **四个训练靶点各有一个自训模型生成的库**（合计入库 **1,265** / 候选 **1,044**）：
   A2A 521（对接中位 −9.70，最强 −14.45）、B2AR 275（**−10.91**，**−15.40**）、
   D3 217（−8.79，−11.56）、5HT2B 252（−9.76，−12.48）；均含 Vina 对接分与 ADMET 分级；
@@ -34,7 +38,7 @@
 | 设计/生成入口 | `python design.py --target A2A` |
 | 训练入口 | `python train.py --config configs/train_multitarget_v2.yml` |
 | 可执行 Notebook | `notebooks/7-eonmol_流程演示.ipynb` |
-| 模型 | **本项目自训权重 `models/7-eonmol_ft_gpcr_v2.pt`**（经双种子 A/B 晋级，默认使用）+ 引导束搜索；官方权重保留为基线与对照。见 [`ModelCard.md`](./ModelCard.md) |
+| 模型 | **本项目自训权重 `models/7-eonmol_ft_gpcr_v2.pt`**（默认使用；原"双种子 A/B 晋级"结论已在出货目标下被推翻，见 [`ModelCard.md`](./ModelCard.md)）+ 引导束搜索；官方权重保留为基线与对照 |
 | 数据 | RCSB PDB（CC0）+ ChEMBL（CC BY-SA 3.0）；来源/许可/划分见 [`data/README.md`](./data/README.md) |
 | 许可 | Pocket2Mol 为 MIT；第三方归属见 [`NOTICE.md`](./NOTICE.md) |
 | 联系方式 | 2025158065@hrbmu.edu.cn |
@@ -101,7 +105,7 @@
 
 | 维度 | 结论 |
 |---|---|
-| 基础模型 | **本项目自训的 GPCR 微调权重**（`models/7-eonmol_ft_gpcr_v2.pt`，19.9 MB，基于 Pocket2Mol 官方权重微调，经双种子 A/B 晋级）；结构为等变消息传递网络（MPNN，6 层 / 256 标量通道 / 64 方向通道）+ MDN 位置头（3 分量） |
+| 基础模型 | **本项目自训的 GPCR 微调权重**（`models/7-eonmol_ft_gpcr_v2.pt`，19.9 MB，基于 Pocket2Mol 官方权重微调；原"双种子 A/B 晋级"结论已在出货目标下被推翻，见 [`ModelCard.md`](./ModelCard.md)）；结构为等变消息传递网络（MPNN，6 层 / 256 标量通道 / 64 方向通道）+ MDN 位置头（3 分量） |
 | **核心改进** | **引导束搜索**：束排序概率乘化学分数增益 `exp(λ·chem)`；λ=3 时 QED 中位 0.667 → 0.803（**+20%**），双随机种子复现 |
 | 伴随改进 | Tanimoto 多样性惩罚（MMR 式）、生成构象力场精修、入库漏斗、全自动对接与分析管线 |
 | 主库（A2A，**当前交付库**） | **521** 入库 / **373** 唯一 Murcko 骨架 / QED 中位 **0.757** / SA 中位 **3.22** / MW 中位 **390 Da** |
@@ -498,7 +502,7 @@ python src/scripts/build_target_registry.py
 | 靶点结构 | `data/targets/` | 5 个 GPCR 受体坐标 + 共晶配体定义（RCSB PDB，CC0） |
 | 最小示例 | `data/example/` | `4yhj.pdb` + 参考配体 SDF |
 | 已知活性/诱饵参考集 | `data/known_drugs/` | 新颖性与富集评估用（ChEMBL，CC BY-SA） |
-| 模型权重 | `models/7-eonmol_ft_gpcr_v2.pt`（本项目自训，默认）；`models/pretrained_Pocket2Mol.pt`（官方基线，MIT） | 说明与晋级证据见 `models/README.md` |
+| 模型权重 | `models/7-eonmol_ft_gpcr_v2.pt`（本项目自训，默认）；`models/pretrained_Pocket2Mol.pt`（官方基线，MIT） | 说明与**已修正的**晋级结论见 `models/README.md` |
 | 模型卡 | `ModelCard.md` | 适用范围、输入输出、已知局限、创新贡献 |
 | 候选清单 | `results/results.csv` 等 | **当前交付库**（自训模型生成，300 候选）；来源与两代库对比见 `results/README.md` |
 | 历史库（归档） | `results/official_weight_library/` | 官方权重生成的 2,931 分子库及其完整下游分析（对接/ADMET/选择性/Pareto/ROC/六维推荐），保留可追溯 |

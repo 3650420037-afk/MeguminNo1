@@ -50,7 +50,9 @@ DRUGLIB = os.path.join(DATA, "druglib")
 
 # ---------------------------------------------------------------- 权重
 PRETRAINED = os.path.join(MODELS, "pretrained_Pocket2Mol.pt")
-# 本项目自训并通过 A/B 晋级的权重(见 docs/微调实验_v3_报告.md)
+# 本项目自训的权重(见 docs/微调实验_v3_报告.md 与 ModelCard.md)。
+# 注意措辞: 它最初在 diversity_w=0 下判为晋级, 但在**出货目标**(diversity_w=0.5)下
+# 复验晋级不成立(QED 两个种子都更低, 仅口袋叠合度一致更好)。不要写成"已晋级"。
 # 存在时作为默认; 不存在则回退到官方权重, 保证任何时候都能跑
 FINETUNED = os.path.join(MODELS, "7-eonmol_ft_gpcr_v2.pt")
 DEFAULT_CKPT = FINETUNED if os.path.exists(FINETUNED) else PRETRAINED

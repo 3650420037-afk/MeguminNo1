@@ -254,10 +254,14 @@ def main():
             if not (hard and ok_v):
                 verdicts.append((name, seed, "NOT_PROMOTED"))
         if miss:
-            log("  (有 %d 个种子缺数据, 不足以判定)" % miss)
+            log("  (有 %d 个种子缺数据, 不足以判定 -> 保守判为 NOT_PROMOTED)" % miss)
+            verdicts.append((name, None, "NOT_PROMOTED"))
         elif not [v for v in verdicts if v[0] == name]:
             verdicts.append((name, None, "PROMOTED"))
-        log("  => %s" % ("PROMOTED" if not [v for v in verdicts if v[0] == name] else "NOT_PROMOTED"))
+        ok = not [v for v in verdicts if v[0] == name and v[2] != "PROMOTED"]
+        log("  成对小结: 结合强度更好 %d 个种子 / 更差 %d 个种子 (容差 ±%.2f)"
+            % (better, worse, TOL_VINA))
+        log("  => %s" % ("PROMOTED" if ok else "NOT_PROMOTED"))
 
     log("\n" + "=" * 78)
     log("最终:")

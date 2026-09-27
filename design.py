@@ -110,8 +110,10 @@ def main():
                     help="是否对输出做构象精修(保持姿态)")
     ap.add_argument("--config", default=DEFAULT_TEMPLATE, help="采样配置模板")
     ap.add_argument("--ckpt", default=None,
-                    help="自定义模型权重路径; 默认用本项目自训并通过两轮 A/B 晋级的 "
+                    help="自定义模型权重路径; 默认用本项目自训的 "
                          "models/7-eonmol_ft_gpcr_v2.pt(不存在时回退官方权重)。"
+                         "注意: 该权重最初在 diversity_w=0 下判为晋级, 但在出货目标"
+                         "(diversity_w=0.5)下复验**晋级不成立**(见 ModelCard.md); "
                          "想跑官方基线请显式传 models/pretrained_Pocket2Mol.pt")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
