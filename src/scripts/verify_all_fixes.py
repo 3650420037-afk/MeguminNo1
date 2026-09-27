@@ -213,6 +213,16 @@ chk("sample_for_pdb: frontier 阈值取自 frontier_threshold 而非 focal_thres
     and not any("focal_threshold" in l for l in _thr_lines),
     "取错键会让校准静默失效(实测过)")
 
+_abc = read("src/scripts/ab_docking_compare.py")
+chk("ab_docking_compare: 单种子禁用晋级结论",
+    "PROVISIONAL" in _abc and "nseeds < 2" in _abc,
+    "种子间 Vina 噪声实测约 0.7, 单种子差异不可作为晋级依据 —— 曾据此两次过早宣布改进")
+chk("ab_docking_compare: 同时报原始 Vina 与配体效率 LE",
+    "le_med" in _abc and "ha_med" in _abc,
+    "Vina 与分子大小强相关, 只报原始分会把'分子更小'误读成'亲和力更差'")
+chk("ab_docking_compare: 尺寸不可比时给出警告",
+    "尺寸不可比" in _abc)
+
 # 7) 关键下游产物
 #
 # ⚠ 这里区分两类事实:

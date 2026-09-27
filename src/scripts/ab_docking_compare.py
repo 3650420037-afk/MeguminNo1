@@ -351,10 +351,22 @@ def main():
         log("  => %s" % ("PROMOTED" if ok else "NOT_PROMOTED"))
 
     log("\n" + "=" * 78)
+    # 单种子禁用"晋级"结论 —— 这是本项目用两次错误换来的纪律。
+    # 实测: 同一条臂**重复运行**的 Vina 中位噪声约 0.14, 但**种子间**噪声约 0.7
+    # (同一配置 thr0: seed2024 = -9.535, seed2025 = -10.24)。因此**单种子**的任何
+    # 主指标差异都可能只是种子效应 —— 我曾据此两次过早宣布改进, 都被第二种子推翻。
+    # 故: 少于两个种子时只输出 PROVISIONAL(未证实), 不得作为晋级依据。
+    nseeds = len({r["seed"] for r in rows})
+    single = nseeds < 2
+    if single:
+        log("⚠ 只有 %d 个种子 -> 结论标记为 PROVISIONAL(未证实), 不得据此晋级。" % nseeds)
+        log("  依据: 种子间 Vina 中位噪声实测约 0.7 kcal/mol, 远大于同臂重复运行的 0.14。")
     log("最终:")
     for name in names[1:]:
         v = [x[2] for x in verdicts if x[0] == name]
-        log("  %-24s %s" % (name, "PROMOTED" if v and v[0] == "PROMOTED" else "NOT_PROMOTED"))
+        ok = bool(v) and v[0] == "PROMOTED"
+        log("  %-24s %s" % (name, ("PROVISIONAL(单种子, 未证实)" if single else
+                                   ("PROMOTED" if ok else "NOT_PROMOTED"))))
     log("说明: 判据以**结合强度(Vina 中位)**为首要轴, 并硬性要求完成分子数不退化 ——")
     log("      完成数退化意味着停止策略被破坏(历史最大失败模式), 其余指标再好看也不晋级。")
     log("产物: %s 与 %s" % (os.path.relpath(args.out, ROOT), os.path.relpath(args.work, ROOT)))
