@@ -181,10 +181,37 @@ chk("mass_dock: 陈旧分块归档而非删除", "_stale_" in _md and "shutil.mo
 chk("mass_dock: 无遗留死参数 --stage", "--stage" not in _md)
 chk("mass_dock: 无遗留死变量 OUT_DS", "OUT_DS" not in _md)
 
-_fr = read("src/models/frontier.py")
-chk("frontier: 容量可配置", "hidden_dim_sca" in _fr and "n_layers" in _fr)
+_fr2 = read("src/models/frontier.py")
+chk("frontier: 容量可配置", "hidden_dim_sca" in _fr2 and "n_layers" in _fr2)
 chk("frontier: 默认 128/32/1 与官方逐位等价(见 verify_frontier_equivalence.py)",
-    "n_layers=1" in _fr and "GVPerceptronVN" in _fr)
+    "n_layers=1" in _fr2 and "GVPerceptronVN" in _fr2)
+
+# frontier 判定阈值的接线 —— 曾出现"配置里改它完全无效"且无任何报错
+_mf = read("src/models/maskfill.py")
+chk("maskfill.sample_init: 接受 frontier_threshold",
+    "frontier_threshold=0" in _mf.split("def sample_init")[1].split("def ")[0],
+    "此前 sample_init 连参数都没有, 阈值被硬编码走默认值")
+chk("maskfill.sample_init: 把它传给 sample_focal",
+    "sample_focal(compose_feature, compose_pos, idx_ligand, idx_protein,"
+    in _mf.replace("\n", " ").replace("  ", " "),
+    "只加参数不传下去等于没接")
+_smp = read("src/sample.py")
+for _fn in ("get_init", "get_next"):
+    _body = _smp.split("def %s(" % _fn)[1].split("\ndef ")[0]
+    chk("sample.py %s: 传递 frontier_threshold" % _fn,
+        "frontier_threshold=frontier_threshold" in _body,
+        "只加签名不往 model 传, 阈值仍不生效")
+_sfp = read("src/sample_for_pdb.py")
+chk("sample_for_pdb: 读取 frontier_threshold 键",
+    "threshold.get('frontier_threshold'" in _sfp,
+    "不读配置键则无法校准")
+# 该键必须与 focal_threshold 区分: 后者是原版 sample.py 的**focal 概率**阈值,
+# 与 frontier 判定无关; 复用同一个键正是当初"改了没生效"的根源。
+_thr_lines = [l for l in _sfp.splitlines() if "_frontier_thr" in l and "float(" in l]
+chk("sample_for_pdb: frontier 阈值取自 frontier_threshold 而非 focal_threshold",
+    bool(_thr_lines) and all("'frontier_threshold'" in l for l in _thr_lines)
+    and not any("focal_threshold" in l for l in _thr_lines),
+    "取错键会让校准静默失效(实测过)")
 
 # 7) 关键下游产物
 #
