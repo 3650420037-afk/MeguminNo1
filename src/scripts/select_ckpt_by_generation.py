@@ -218,6 +218,15 @@ def main():
     print("=" * 88)
     print("按生成质量挑选检查点 | 靶点=%s 种子=%d 规模=%d/%d/%d 候选=%d"
           % (args.target, args.seed, args.num_samples, args.beam, args.max_steps, len(cands)))
+    try:
+        from paths import recommended_frontier_threshold as _rec
+        for ck, _v, _it in cands:
+            _val, _src = _rec(ck)
+            if abs(_val - args.frontier_threshold) > 1e-9:
+                print("[口径提示] %s 的推荐阈值是 %+.2f（来源 %s），本次用 %+.2f"
+                      % (os.path.basename(ck), _val, _src, args.frontier_threshold), flush=True)
+    except Exception:
+        pass
     print("=" * 88, flush=True)
 
     rows = []

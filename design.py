@@ -32,7 +32,7 @@ import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 from paths import (ROOT, CONFIGS, OUTPUTS, PRETRAINED, DEFAULT_CKPT, TARGETS,  # noqa: E402
-                   ensure_dir, missing_hint)
+                   ensure_dir, missing_hint, recommended_frontier_threshold)
 
 DEFAULT_TEMPLATE = os.path.join(CONFIGS, "sample_for_pdb_guided_l3.yml")
 
@@ -82,6 +82,9 @@ def build_config(args, center, out_cfg):
     g["sa_w"] = args.sa_w
     g["lam"] = args.lam
     g["diversity_w"] = args.diversity_w
+    # 推荐阈值随权重走：CLI 显式传参 > 权重内置/侧车表 > 0.0（原版行为）
+    s.setdefault("threshold", {})["frontier_threshold"] = float(
+        getattr(args, "_thr", 0.0))
     s["relax_output"] = bool(args.relax)
     ensure_dir(os.path.dirname(out_cfg))
     with open(out_cfg, "w", encoding="utf-8") as f:
@@ -116,9 +119,19 @@ def main():
                          "见 ModelCard.md)。想跑官方基线请显式传 "
                          "models/pretrained_Pocket2Mol.pt; 想复现旧结论可传 "
                          "models/7-eonmol_ft_gpcr_v2.pt")
+    ap.add_argument("--frontier-threshold", type=float, default=None,
+                    help="生长前沿判定阈值(决定何时停止, 直接控制分子大小)。"
+                         "不传=用**该权重自己的推荐值**(见 models/threshold_recommendations.json; "
+                         "v3 推荐 -0.5、官方/v10 推荐 0.0); 传 0.0 可强制回原版行为")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()
+
+    ckpt_for_thr = args.ckpt or DEFAULT_CKPT
+    if args.frontier_threshold is None:
+        args._thr, thr_src = recommended_frontier_threshold(ckpt_for_thr)
+    else:
+        args._thr, thr_src = float(args.frontier_threshold), "命令行 --frontier-threshold"
 
     reg = load_targets()
     pdb, center, tname, ref_smi = resolve_target(args, reg)
@@ -143,6 +156,7 @@ def main():
         args.num_samples, args.beam, args.max_steps, args.seed))
     print("  引导 = %s (λ=%.2f, 多样性w=%.2f, 构象精修=%s)" % (
         "开" if args.lam > 0 else "关", args.lam, args.diversity_w, bool(args.relax)))
+    print("  停止阈值 frontier_threshold = %+.2f  (来源: %s)" % (args._thr, thr_src))
     print("  输出 = %s" % run_dir)
     print("=" * 74, flush=True)
 

@@ -198,6 +198,19 @@ def main():
             seen[b] = 0
         names.append(b)
     ensure_dir(args.work)
+    # 口径告警：出货口径是"推荐阈值随权重走"（见 src/paths.py），而本工具默认对所有臂
+    # 用同一个阈值（受控比较必须如此）。若某权重自带推荐值且与本次不同，明确提示，
+    # 避免"评测口径 != 出货口径"（本项目曾因此撤回一次晋级结论）。
+    try:
+        from paths import recommended_frontier_threshold as _rec
+        for c in args.ckpts:
+            _v, _src = _rec(c)
+            if abs(_v - args.frontier_threshold) > 1e-9:
+                log("[口径提示] %s 的推荐阈值是 %+.2f（来源 %s），本次统一用 %+.2f —— "
+                    "受控比较要求同阈值，但结论不代表该权重的出货口径。"
+                    % (os.path.basename(c), _v, _src, args.frontier_threshold))
+    except Exception:
+        pass
     log("=" * 78)
     log("对接级 A/B: 靶点 %s | 每检查点每种子 %d 分子 | beam %d | %d 步 | 种子 %s"
         % (args.target, args.n, args.beam, args.max_steps, args.seeds))

@@ -10,6 +10,7 @@
 所有路径都由本文件所在的 src/ 反推, 因此整棵目录可以整体搬移而无需改代码。
 需要覆盖默认位置时用环境变量, 不要改源码。
 """
+import json
 import os
 import sys
 
@@ -109,3 +110,44 @@ def missing_hint(paths_with_names):
         if not os.path.exists(p):
             lines.append("  - %s: %s" % (name, p))
     return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# 推荐采样阈值随权重走（2026-09-28）
+# ---------------------------------------------------------------------------
+# 动机（实测，见 docs/任务状态与记忆.md §5.16 / §5.18 / §5.21）：
+#   * v3 在 frontier_threshold=-0.5 下，A2A 9 个种子中 8 个原始 Vina 更好
+#     （符号检验单侧 p=0.0195，中位 -0.765），尺寸 20->25 重原子、strict 63.9%->78.2%；
+#   * 但同一 -0.5 会伤害 v10（分子本来就到位）—— 即"最优阈值与权重配套"。
+# 因此阈值不做全局硬编码，而是**跟着权重走**：权重自带推荐值时用它，否则查
+# models/threshold_recommendations.json，再否则回退 0.0（= 原版行为，向后兼容）。
+THRESHOLD_TABLE = os.path.join(MODELS, "threshold_recommendations.json")
+
+
+def recommended_frontier_threshold(ckpt_path, default=0.0, peek_ckpt=True):
+    """返回该检查点的推荐 frontier_threshold，以及来源说明。
+
+    解析顺序：① 权重文件 config 里的 frontier_threshold（未来晋级的权重会内置）
+              ② models/threshold_recommendations.json 侧车表（按文件名）
+              ③ default（0.0，与官方/原版行为一致）
+    peek_ckpt 为 True 时会尝试 torch.load（只读 config，失败则跳过）——15–45 MB 权重，
+    仅在 design.py / 评测脚本启动时调用一次。
+    """
+    name = os.path.basename(ckpt_path)
+    if peek_ckpt:
+        try:
+            import torch
+            ck = torch.load(ckpt_path, map_location="cpu", weights_only=False)
+            val = (ck.get("config") or {}).get("frontier_threshold")
+            if val is not None:
+                return float(val), "权重内置(frontier_threshold)"
+        except Exception:
+            pass
+    try:
+        with open(THRESHOLD_TABLE, encoding="utf-8") as f:
+            tab = json.load(f)
+        if name in tab:
+            return float(tab[name]), "models/threshold_recommendations.json"
+    except Exception:
+        pass
+    return float(default), "默认(原版行为)"

@@ -352,6 +352,8 @@ def main():
     ap.add_argument("--seed", type=int, default=2024)
     ap.add_argument("--lam", type=float, default=3.0, help="引导强度 λ")
     ap.add_argument("--diversity-w", type=float, default=0.5)
+    ap.add_argument("--frontier-threshold", type=float, default=None,
+                    help="停止阈值; 不传=用权重自己的推荐值(v3 -0.5 / 官方与 v10 为 0.0)")
     ap.add_argument("--top", type=int, default=100, help="写入清单的候选数; 0 表示全部")
     ap.add_argument("--rank-by", choices=["auto", "druglikeness", "vina", "tier"],
                     default="auto",
@@ -408,6 +410,8 @@ def main():
                "--seed", str(args.seed), "--lam", str(args.lam),
                "--diversity-w", str(args.diversity_w),
                "--device", args.device, "--outdir", design_out]
+        if args.frontier_threshold is not None:
+            cmd += ["--frontier-threshold", str(args.frontier_threshold)]
         t1 = time.time()
         gen_rc = run(cmd, os.path.join(run_dir, "01_design.log"))
         gen_sec = time.time() - t1
