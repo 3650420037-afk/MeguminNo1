@@ -1,77 +1,203 @@
 {
- "A2A": {
-  "pdb": "data/targets/4EIY_A2A受体.pdb",
-  "ligand_comp": "ZMA",
-  "receptor": "CRYSTAL STRUCTURE OF THE CHIMERIC PROTEIN OF A2AAR-BRIL IN COMPLEX WITH ZM241385 AT 1.8A RESOLUTION",
-  "ligand_smiles": "Nc1nc(NCCc2ccc(O)cc2)nc2nc(-c3ccco3)nn12",
-  "center": [
-   -0.42,
-   8.53,
-   17.13
-  ],
-  "n_ligand_heavy": 25,
-  "n_smiles_heavy": 25,
-  "deposited_ligand_complete": true,
-  "source": "data/targets/4EIY_配体ZMA.cif"
- },
- "B2AR": {
-  "pdb": "data/targets/2RH1_β2肾上腺素受体.pdb",
-  "ligand_comp": "CAU",
-  "receptor": "HIGH RESOLUTION CRYSTAL STRUCTURE OF HUMAN B2-ADRENERGIC G PROTEIN- COUPLED RECEPTOR.",
-  "ligand_smiles": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12",
-  "center": [
-   -29.52,
-   9.23,
-   6.94
-  ],
-  "n_ligand_heavy": 22,
-  "n_smiles_heavy": 22,
-  "deposited_ligand_complete": true,
-  "source": "data/targets/2RH1_配体CAU.cif"
- },
- "D3": {
-  "pdb": "data/targets/3PBL_D3多巴胺受体.pdb",
-  "ligand_comp": "ETQ",
-  "receptor": "Structure of the human dopamine D3 receptor in complex with eticlopride",
-  "ligand_smiles": "CCc1cc(Cl)c(OC)c(C(=O)NCC2CCCN2CC)c1O",
-  "center": [
-   0.09,
-   -14.83,
-   10.43
-  ],
-  "n_ligand_heavy": 23,
-  "n_smiles_heavy": 23,
-  "deposited_ligand_complete": true,
-  "source": "data/targets/3PBL.cif"
- },
- "5HT2B": {
-  "pdb": "data/targets/4IB4_5HT2B受体.pdb",
-  "ligand_comp": "ERM",
-  "receptor": "Crystal structure of the chimeric protein of 5-HT2B-BRIL in complex with ergotamine",
-  "ligand_smiles": "CN1CC(C(=O)NC2(C)OC3(O)C4CCCN4C(=O)C(Cc4ccccc4)N3C2=O)C=C2c3cccc4[nH]cc(c34)CC21",
-  "center": [
-   22.45,
-   18.28,
-   11.73
-  ],
-  "n_ligand_heavy": 43,
-  "n_smiles_heavy": 43,
-  "deposited_ligand_complete": true,
-  "source": "data/targets/4IB4.cif"
- },
- "A1AR": {
-  "pdb": "data/targets/5UEN.pdb",
-  "ligand_comp": "DU1",
-  "receptor": "Crystal structure of the human adenosine A1 receptor A1AR-bRIL in complex with the covalent antagonist DU172 at 3.2A resolution",
-  "ligand_smiles": "CCCn1c(=O)c2[nH]c(C3CCCCC3)nc2n(CCCNC(=O)c2ccc(S(=O)(=O)F)cc2)c1=O",
-  "center": [
-   55.97,
-   58.9,
-   143.62
-  ],
-  "n_ligand_heavy": 35,
-  "n_smiles_heavy": 36,
-  "deposited_ligand_complete": false,
-  "source": "data/targets/5UEN.cif"
- }
+  "A2A": {
+    "pdb": "data/targets/4EIY_A2A受体.pdb",
+    "ligand_comp": "ZMA",
+    "receptor": "CRYSTAL STRUCTURE OF THE CHIMERIC PROTEIN OF A2AAR-BRIL IN COMPLEX WITH ZM241385 AT 1.8A RESOLUTION",
+    "ligand_smiles": "Nc1nc(NCCc2ccc(O)cc2)nc2nc(-c3ccco3)nn12",
+    "center": [
+      -0.42,
+      8.53,
+      17.13
+    ],
+    "n_ligand_heavy": 25,
+    "n_smiles_heavy": 25,
+    "deposited_ligand_complete": true,
+    "source": "data/targets/4EIY_配体ZMA.cif"
+  },
+  "B2AR": {
+    "pdb": "data/targets/2RH1_β2肾上腺素受体.pdb",
+    "ligand_comp": "CAU",
+    "receptor": "HIGH RESOLUTION CRYSTAL STRUCTURE OF HUMAN B2-ADRENERGIC G PROTEIN- COUPLED RECEPTOR.",
+    "ligand_smiles": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12",
+    "center": [
+      -29.52,
+      9.23,
+      6.94
+    ],
+    "n_ligand_heavy": 22,
+    "n_smiles_heavy": 22,
+    "deposited_ligand_complete": true,
+    "source": "data/targets/2RH1_配体CAU.cif"
+  },
+  "D3": {
+    "pdb": "data/targets/3PBL_D3多巴胺受体.pdb",
+    "ligand_comp": "ETQ",
+    "receptor": "Structure of the human dopamine D3 receptor in complex with eticlopride",
+    "ligand_smiles": "CCc1cc(Cl)c(OC)c(C(=O)NCC2CCCN2CC)c1O",
+    "center": [
+      0.09,
+      -14.83,
+      10.43
+    ],
+    "n_ligand_heavy": 23,
+    "n_smiles_heavy": 23,
+    "deposited_ligand_complete": true,
+    "source": "data/targets/3PBL.cif"
+  },
+  "5HT2B": {
+    "pdb": "data/targets/4IB4_5HT2B受体.pdb",
+    "ligand_comp": "ERM",
+    "receptor": "Crystal structure of the chimeric protein of 5-HT2B-BRIL in complex with ergotamine",
+    "ligand_smiles": "CN1CC(C(=O)NC2(C)OC3(O)C4CCCN4C(=O)C(Cc4ccccc4)N3C2=O)C=C2c3cccc4[nH]cc(c34)CC21",
+    "center": [
+      22.45,
+      18.28,
+      11.73
+    ],
+    "n_ligand_heavy": 43,
+    "n_smiles_heavy": 43,
+    "deposited_ligand_complete": true,
+    "source": "data/targets/4IB4.cif"
+  },
+  "A1AR": {
+    "pdb": "data/targets/5UEN.pdb",
+    "ligand_comp": "DU1",
+    "receptor": "Crystal structure of the human adenosine A1 receptor A1AR-bRIL in complex with the covalent antagonist DU172 at 3.2A resolution",
+    "ligand_smiles": "CCCn1c(=O)c2[nH]c(C3CCCCC3)nc2n(CCCNC(=O)c2ccc(S(=O)(=O)F)cc2)c1=O",
+    "center": [
+      55.97,
+      58.9,
+      143.62
+    ],
+    "n_ligand_heavy": 35,
+    "n_smiles_heavy": 36,
+    "deposited_ligand_complete": false,
+    "source": "data/targets/5UEN.cif"
+  },
+  "D2": {
+    "pdb": "data/targets_m6/6CM4_D2.pdb",
+    "ligand_comp": "8NU",
+    "receptor": "Dopamine D2 receptor",
+    "ligand_smiles": "",
+    "center": [
+      9.925,
+      5.846,
+      -9.582
+    ],
+    "n_ligand_heavy": 30,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/6CM4_D2.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "6CM4",
+    "uniprot": "P14416",
+    "chembl": "CHEMBL217"
+  },
+  "5HT1A": {
+    "pdb": "data/targets_m6/8FY8_5HT1A.pdb",
+    "ligand_comp": "Y01",
+    "receptor": "5-HT1A receptor",
+    "ligand_smiles": "",
+    "center": [
+      125.028,
+      131.464,
+      109.14
+    ],
+    "n_ligand_heavy": 70,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/8FY8_5HT1A.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "8FY8",
+    "uniprot": "P08908",
+    "chembl": "CHEMBL214"
+  },
+  "5HT2A": {
+    "pdb": "data/targets_m6/6A93_5HT2A.pdb",
+    "ligand_comp": "8NU",
+    "receptor": "5-HT2A receptor",
+    "ligand_smiles": "",
+    "center": [
+      13.752,
+      -0.738,
+      60.462
+    ],
+    "n_ligand_heavy": 30,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/6A93_5HT2A.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "6A93",
+    "uniprot": "P28223",
+    "chembl": "CHEMBL224"
+  },
+  "M1": {
+    "pdb": "data/targets_m6/5CXV_M1.pdb",
+    "ligand_comp": "0HK",
+    "receptor": "Muscarinic M1 receptor",
+    "ligand_smiles": "",
+    "center": [
+      -11.802,
+      -14.036,
+      38.286
+    ],
+    "n_ligand_heavy": 26,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/5CXV_M1.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "5CXV",
+    "uniprot": "P11229",
+    "chembl": "CHEMBL216"
+  },
+  "H1": {
+    "pdb": "data/targets_m6/8X5Y_H1.pdb",
+    "ligand_comp": "XB7",
+    "receptor": "Histamine H1 receptor",
+    "ligand_smiles": "",
+    "center": [
+      178.955,
+      169.018,
+      137.993
+    ],
+    "n_ligand_heavy": 34,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/8X5Y_H1.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "8X5Y",
+    "uniprot": "P35367",
+    "chembl": "CHEMBL231"
+  },
+  "OPRM1": {
+    "pdb": "data/targets_m6/8EFO_OPRM1.pdb",
+    "ligand_comp": "8QY",
+    "receptor": "Mu opioid receptor",
+    "ligand_smiles": "",
+    "center": [
+      185.518,
+      171.44,
+      172.734
+    ],
+    "n_ligand_heavy": 25,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/8EFO_OPRM1.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "8EFO",
+    "uniprot": "P35372",
+    "chembl": "CHEMBL233"
+  },
+  "OPRK1": {
+    "pdb": "data/targets_m6/4DJH_OPRK1.pdb",
+    "ligand_comp": "JDC",
+    "receptor": "Kappa opioid receptor",
+    "ligand_smiles": "",
+    "center": [
+      3.684,
+      -24.009,
+      59.471
+    ],
+    "n_ligand_heavy": 34,
+    "deposited_ligand_complete": true,
+    "source": "data/targets_m6/4DJH_OPRK1.pdb",
+    "m6_batch": "20260928",
+    "pdb_id": "4DJH",
+    "uniprot": "P41145",
+    "chembl": "CHEMBL237"
+  }
 }
