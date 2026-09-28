@@ -33,6 +33,16 @@ TARGETS = {
     "B2AR": "CHEMBL210",    # Beta-2 adrenergic receptor (human)
     "D3": "CHEMBL234",      # Dopamine D3 receptor (human)
     "5HT2B": "CHEMBL1833",  # 5-hydroxytryptamine receptor 2B (human)
+    # ---- M6 批次（2026-09-28 追加）：按受体分组扩到数十个口袋 ----
+    # 选取原则：人源、Class A、ChEMBL 活性数据充足、且 RCSB 有共晶类药配体的结构。
+    "D2":     "CHEMBL217",   # Dopamine D2 receptor (human)
+    "5HT1A":  "CHEMBL214",   # 5-hydroxytryptamine receptor 1A (human)
+    "5HT2A":  "CHEMBL224",   # 5-hydroxytryptamine receptor 2A (human)
+    "M1":     "CHEMBL216",   # Muscarinic acetylcholine receptor M1 (human)
+    "H1":     "CHEMBL231",   # Histamine H1 receptor (human)
+    "OPRM1":  "CHEMBL233",   # Mu opioid receptor (human)
+    "OPRK1":  "CHEMBL237",   # Kappa opioid receptor (human)
+    "A1":     "CHEMBL226",   # Adenosine A1 receptor (human)
 }
 
 
