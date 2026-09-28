@@ -58,6 +58,16 @@ TARGET_CSV = {
     "B2AR": "B2AR_活性配体.csv",
     "D3": "D3_活性配体.csv",
     "5HT2B": "5HT2B_活性配体.csv",
+    # ---- M6 批次（2026-09-28）：按受体扩口袋用的人源 Class A 靶点 ----
+    # 这些靶点没有旧的 *_活性配体.csv，只有 fetch_chembl_actives.py 的 *_活性配体_full.csv
+    "D2": "D2_活性配体_full.csv",
+    "5HT1A": "5HT1A_活性配体_full.csv",
+    "5HT2A": "5HT2A_活性配体_full.csv",
+    "M1": "M1_活性配体_full.csv",
+    "H1": "H1_活性配体_full.csv",
+    "OPRM1": "OPRM1_活性配体_full.csv",
+    "OPRK1": "OPRK1_活性配体_full.csv",
+    "A1": "A1_活性配体_full.csv",
 }
 
 
