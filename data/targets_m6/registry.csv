@@ -1,0 +1,8 @@
+﻿target,uniprot,chembl,desc,pdb_id,resolution,comp_id,ligand_mw,ligand_heavy,center_x,center_y,center_z,receptor_pdb,ligand_smiles
+D2,P14416,CHEMBL217,Dopamine D2 receptor,6CM4,2.867,8NU,410.0,30,9.925,5.846,-9.582,data\targets_m6\6CM4_D2.pdb,
+5HT1A,P08908,CHEMBL214,5-HT1A receptor,8FY8,2.79,Y01,487.0,70,125.028,131.464,109.14,data\targets_m6\8FY8_5HT1A.pdb,
+5HT2A,P28223,CHEMBL224,5-HT2A receptor,6A93,3.0,8NU,410.0,30,13.752,-0.738,60.462,data\targets_m6\6A93_5HT2A.pdb,
+M1,P11229,CHEMBL216,Muscarinic M1 receptor,5CXV,2.7,0HK,393.0,26,-11.802,-14.036,38.286,data\targets_m6\5CXV_M1.pdb,
+H1,P35367,CHEMBL231,Histamine H1 receptor,8X5Y,3.0,XB7,459.0,34,178.955,169.018,137.993,data\targets_m6\8X5Y_H1.pdb,
+OPRM1,P35372,CHEMBL233,Mu opioid receptor,8EFO,2.8,8QY,362.0,25,185.518,171.44,172.734,data\targets_m6\8EFO_OPRM1.pdb,
+OPRK1,P41145,CHEMBL237,Kappa opioid receptor,4DJH,2.9,JDC,466.0,34,3.684,-24.009,59.471,data\targets_m6\4DJH_OPRK1.pdb,
