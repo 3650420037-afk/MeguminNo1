@@ -24,28 +24,34 @@ from utils.guidance import chem_score, logp_to_rank_prob_guided, diversity_penal
 def size_schedule_threshold(base_thr, n_ha, step_i, max_steps, sched):
     """轨迹内尺寸调度（S1）：返回该分子本步应使用的 frontier 阈值。
 
-    sched（dict，缺省/`target_ha`<=0 时**恒返回 base_thr**，即与历史行为逐位一致）：
-      target_ha   目标重原子数（如数据先验 28–29）
-      slack       容差（重原子数）
-      relax       落后时下调的幅度（<0 方向 = 更容易判为 frontier = 继续长）
-      tighten     超前时上调的幅度（默认 0 = 不上调）
-      warmup_frac 前若干比例的步数不干预（让模型自行起步）
+    ⚠ **机制已按实测修正（2026-09-29 20:40）**：原设计用"按步数线性外推期望值"
+    （`target × step/max_steps`）判断落后 —— 但实测 **8 份日志 410 个分子，`重原子数 − 步数 ≡ 0`**：
+    采样**每步恰好加 1 个重原子**，真实轨迹是 `1×step`，永远高于"线性外推期望"，
+    故原规则在正常 40 步运行里**几乎永不触发**（只会在 max_steps 极小时误触发）。
+    → 改为**绝对尺寸恒温器**：**分子只要还小于目标尺寸，就放松阈值鼓励它继续长**；
+    超过目标（且开启 tighten）则收紧、让它更容易停。**分子大小 = 停止步数**，故这等价于
+    直接把"停止步数"朝目标尺寸推。
 
-    返回 (阈值, 动作) —— 动作用于统计/留痕，取值 'off'/'warmup'/'relax'/'tighten'/'keep'。
+    sched（dict；缺省/`target_ha`<=0 时**恒返回 base_thr**，即与历史行为逐位一致）：
+      target_ha   目标重原子数（如数据先验 28–29）
+      slack       容差（重原子数）：小于 target−slack 才算"偏小"
+      relax       偏小时下调的幅度（阈值↓ = 更容易判为 frontier = 继续长）
+      tighten     偏大时上调的幅度（默认 0 = 不干预偏大者）
+      warmup_frac 前若干比例步数不干预（让模型自行起步）
+
+    返回 (阈值, 动作)，动作用于统计/留痕：'off'/'warmup'/'relax'/'tighten'/'keep'。
     """
     sched = sched or {}
     target = float(sched.get('target_ha', 0) or 0)
     if target <= 0:
         return base_thr, 'off'
-    prog = step_i / float(max(1, max_steps))
-    if prog < float(sched.get('warmup_frac', 0.25)):
+    if step_i < float(sched.get('warmup_frac', 0.25)) * max(1, max_steps):
         return base_thr, 'warmup'
     slack = float(sched.get('slack', 4.0))
-    expect = max(1.0, target * prog)
-    if n_ha < expect - slack:
+    if n_ha < target - slack:
         return base_thr - float(sched.get('relax', 0.35)), 'relax'
     tighten = float(sched.get('tighten', 0.0))
-    if tighten > 0 and n_ha > expect + slack:
+    if tighten > 0 and n_ha > target + slack:
         return base_thr + tighten, 'tighten'
     return base_thr, 'keep'
 
