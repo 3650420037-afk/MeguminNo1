@@ -224,7 +224,11 @@ def main():
                    "elapsed_sec": round(el, 1)},
         "env": {"python": sys.version.split()[0], "torch": torch.__version__,
                 "cuda": torch.cuda.is_available(),
-                "gpu": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+                # is_available() 在 CUDA_VISIBLE_DEVICES="" 下可能仍为 True 而 device_count()==0，
+                # 直接取名字会抛 AssertionError("Invalid device id")，使 CPU 运行在写清单时崩掉
+                # （2026-09-29 用 --device cpu 做 S1 预检时实测）。
+                "gpu": (torch.cuda.get_device_name(0)
+                        if torch.cuda.device_count() > 0 else None),
                 "platform": platform.platform()},
         "timestamp": ts,
     }
