@@ -61,9 +61,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 from paths import ROOT, OUTPUTS, ensure_dir, recommended_frontier_threshold  # noqa: E402
 
 SELECT = os.path.join(ROOT, "src", "scripts", "select_ckpt_by_generation.py")
-BAND = (340.0, 430.0)
+BAND = (340.0, 470.0)   # v1.2：上界由 430 放宽到 470，依据见下（下界 340 是 §5.2e 的预登记硬指标）
 XSEED_SPREAD_MAX = 10.0        # §5.33 判据：跨种子 MW 极差 ≤10%
-SCRIPT_VER = "adaptA-1.1(20260929)"
+SCRIPT_VER = "adaptA-1.2(20260929)"
+# v1.2 相对 v1.1 的三处改动（起因：v1.1 的 10 种子落区率 80% < 90%，2 例**过冲** 433.5/446.5）：
+#  ① 上界 430 → 470：**预登记的硬指标只有"MW 中位 ≥340"**（§5.2e）；上界是工程余量，
+#     应贴着建库 strict 的真实上限（MW ≤ 500）留 30 Da 余量，而不是自造的 430。
+#     旁证：官方权重自身生成 MW 中位 381–400，v10@5500 正常模式 388–416。
+#  ② 首次调整用 --step（0.25），**之后改用 --fine-step（0.125）**，避免一步跨过上界。
+#  ③ 过冲（MW > 上界）时**只上调阈值**且不消耗额外大步长；不足（MW < 下界）时才下调。
 
 # stdout 重定向到文件时 Windows 默认 cp936，任何非 GBK 字符都会 UnicodeEncodeError
 # （v1.0 就因打印 ✅ 而崩，两臂在 16:01 双双挂掉）→ 强制 UTF-8，且日志只用 ASCII 标记。
@@ -148,8 +154,13 @@ def main():
                     help=">0 时，落区后用最终阈值再采一批到 final-n（对接 A/B 用）")
     ap.add_argument("--beam", type=int, default=50)
     ap.add_argument("--max-steps", type=int, default=40)
-    ap.add_argument("--step", type=float, default=0.25, help="每次调整的阈值步长")
-    ap.add_argument("--max-tries", type=int, default=2, help="最多额外重采次数")
+    ap.add_argument("--step", type=float, default=0.25, help="首次调整的阈值步长")
+    ap.add_argument("--fine-step", type=float, default=0.125,
+                    help="首次之后使用的半步长（v1.2：防一步跨过上界导致过冲）")
+    ap.add_argument("--band-hi", type=float, default=BAND[1],
+                    help="达标带上界（v1.2 默认 470：贴着建库 strict 的 MW<=500 留 30 Da 余量；"
+                         "预登记硬指标只有下界 340）")
+    ap.add_argument("--max-tries", type=int, default=3, help="最多额外重采次数（v1.2 由 2 提到 3）")
     ap.add_argument("--start-thr", type=float, default=None,
                     help="起点阈值；不传=用权重推荐值（paths.recommended_frontier_threshold）")
     ap.add_argument("--work", default=os.path.join(OUTPUTS, "adaptA"))
@@ -160,13 +171,14 @@ def main():
     # 因此来源会如实写成"默认(原版行为)"（数值=0.0，与 v10 的评测口径一致）。
     rec_thr, rec_src = recommended_frontier_threshold(args.ckpt, peek_ckpt=False)
     start_thr = rec_thr if args.start_thr is None else float(args.start_thr)
+    band = (BAND[0], float(args.band_hi))
     run_utc = time.strftime("%Y-%m-%dT%H:%M:%S")
     run_stamp = time.strftime("%Y%m%d_%H%M%S")
     log("=" * 84)
-    log("A' adaptive threshold sampling (v1.1) | ckpt=%s | target=%s | seeds=%s" % (
+    log("A' adaptive threshold sampling (v1.2) | ckpt=%s | target=%s | seeds=%s" % (
         os.path.basename(args.ckpt), args.target, args.seeds))
-    log("  start_thr %+.2f (source: %s) | n0=%d | band MW[%.0f, %.0f] | step %.2f | max adjusts %d"
-        % (start_thr, rec_src, args.n0, BAND[0], BAND[1], args.step, args.max_tries))
+    log("  start_thr %+.2f (source: %s) | n0=%d | band MW[%.0f, %.0f] | step %.3f -> fine %.3f | max adjusts %d"
+        % (start_thr, rec_src, args.n0, band[0], band[1], args.step, args.fine_step, args.max_tries))
     log("  out=%s | run_utc=%s" % (os.path.relpath(args.out, ROOT), run_utc))
     log("=" * 84)
 
@@ -183,7 +195,7 @@ def main():
                                          args.max_steps, seed, thr, tag)
             m = measure(smis)
             valid = (rc == 0 and m["n"] > 0 and sess is not None)
-            in_band = bool(valid and m["mw_med"] is not None and BAND[0] <= m["mw_med"] <= BAND[1])
+            in_band = bool(valid and m["mw_med"] is not None and band[0] <= m["mw_med"] <= band[1])
             if not valid:
                 invalid += 1
             traj.append(dict(attempt=attempt, thr=thr, rc=rc, valid=bool(valid),
@@ -199,7 +211,12 @@ def main():
                 log("    [WARN] invalid batch (rc=%s n=%s session=%s) -> threshold NOT changed, retry same"
                     % (rc, m["n"], sess))
                 continue
-            thr = thr - args.step if m["mw_med"] < BAND[0] else thr + args.step
+            # v1.2：首次用大步长，之后用半步长；不足→下调阈值（长大），过冲→上调阈值（变小）
+            stp = args.step if attempt == 0 else args.fine_step
+            if m["mw_med"] < band[0]:
+                thr = thr - stp
+            else:
+                thr = thr + stp
 
         topup = None
         if args.final_n and final and final["in_band"] and final["n"] < args.final_n:
@@ -209,7 +226,7 @@ def main():
             mm = measure(smis)
             topup = dict(**mm, session=sess, thr=final["thr"], rc=rc,
                          in_band=bool(rc == 0 and mm["n"] > 0 and mm["mw_med"] is not None
-                                      and BAND[0] <= mm["mw_med"] <= BAND[1]))
+                                      and band[0] <= mm["mw_med"] <= band[1]))
             log("  seed %d | top-up thr %+.2f rc=%s n=%d | MW %s | HA %s | strict %s | %s"
                 % (seed, final["thr"], rc, topup["n"], topup["mw_med"], topup["ha_med"],
                    topup["strict_rate"], "IN-BAND" if topup["in_band"] else "OUT"))
