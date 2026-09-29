@@ -30,6 +30,7 @@ NIGHT = os.path.join(ROOT, "outputs", "night_pipeline_v10")
 BAND = (340.0, 430.0)
 
 from rdkit import Chem, RDLogger  # noqa: E402
+from rdkit.Chem import Descriptors  # noqa: E402
 
 RDLogger.DisableLog("rdApp.*")
 
@@ -54,7 +55,7 @@ def metrics(smiles_path):
     if not mols:
         return None
     ha = sorted(m.GetNumHeavyAtoms() for m in mols)
-    mw = sorted(round(m.GetMolWt(), 1) for m in mols)
+    mw = sorted(round(Descriptors.MolWt(m), 1) for m in mols)   # Mol 没有 GetMolWt()，自测踩到
     return dict(n=len(mols), mw=st.median(mw), ha=st.median(ha),
                 ha_min=min(ha), ha_max=max(ha),
                 frac_ha25=sum(1 for x in ha if x >= 25) / len(ha),

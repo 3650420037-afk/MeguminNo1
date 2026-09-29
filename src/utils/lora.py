@@ -43,6 +43,12 @@ class LoRALinear(nn.Module):
         self.lora_B = nn.Linear(self.rank, base.out_features, bias=False)
         nn.init.kaiming_uniform_(self.lora_A.weight, a=5 ** 0.5)
         nn.init.zeros_(self.lora_B.weight)          # ← 零初始化：初始 ΔW = 0
+        # ⚠ 必须与 base 同 device/dtype：`apply_lora` 通常在模型 `.to(device)` **之后**调用，
+        # 而 nn.Linear 默认建在 CPU —— 不搬的话首次前向必然
+        # `RuntimeError: Expected all tensors to be on the same device`（独立代码审查实测发现，
+        # 用 meta 设备可复现：base=meta、适配器=cpu）。
+        self.lora_A.to(device=base.weight.device, dtype=base.weight.dtype)
+        self.lora_B.to(device=base.weight.device, dtype=base.weight.dtype)
 
     def forward(self, x):
         return self.base(x) + self.lora_B(self.lora_A(x)) * self.scaling
@@ -102,8 +108,21 @@ def apply_lora(model, targets=('encoder',), rank=8, alpha=16.0, verbose=True):
     bad = {k: v for k, v in shared.items() if any(n in hit_names for n in v)}
     if bad:
         raise NotImplementedError(
-            '检测到权重共享的 nn.Linear，apply_lora/merge_lora 不支持该情形（会静默漏合并）: %s'
+            '检测到模块级权重共享的 nn.Linear，apply_lora/merge_lora 不支持该情形（会静默漏合并）: %s'
             % list(bad.values())[:2])
+    # **参数级**共享（两个不同 Linear 的 weight 是同一张量，如 `b.weight = a.weight`）也要拦：
+    # merge_lora 的 `base.weight.copy_()` 是原地写，会把增量叠加两次（独立审查实测差 0.46）。
+    pseen = {}
+    for name, mod in model.named_modules(remove_duplicate=False):
+        if isinstance(mod, nn.Linear) and name in hit_names:
+            for pname, p in (('weight', mod.weight), ('bias', mod.bias)):
+                if p is not None:
+                    pseen.setdefault(id(p), []).append('%s.%s' % (name, pname))
+    pshared = {k: v for k, v in pseen.items() if len(v) > 1}
+    if pshared:
+        raise NotImplementedError(
+            '检测到参数级权重共享（同一张量被多个 Linear 使用），merge 会重复叠加: %s'
+            % list(pshared.values())[:2])
     for name, mod in hits:
         _set_submodule(model, name, LoRALinear(mod, rank=rank, alpha=alpha))
     # 冻结所有非 LoRA 参数（含头部）；若要"适配器 + 头部"一起训，请随后自行解冻头部
@@ -138,8 +157,16 @@ def lora_state_dict(model):
 
 
 def load_lora_state_dict(model, sd):
-    """把适配器权重灌回（键必须完全匹配当前 LoRA 结构）。"""
-    missing = [k for k in model.state_dict() if ('lora_A' in k or 'lora_B' in k) and k not in sd]
+    """把适配器权重灌回（键必须完全匹配当前 LoRA 结构）。
+
+    ⚠ 若模型**根本没有** LoRA 层（未注入），旧实现会"什么都不加载却返回成功计数"——
+    独立审查实测到这一静默失败，现改为显式报错。
+    """
+    have = [k for k in model.state_dict() if 'lora_A' in k or 'lora_B' in k]
+    if not have:
+        raise RuntimeError('该模型没有 LoRA 层（未调用 apply_lora），load_lora_state_dict 无意义；'
+                           '请先注入适配器')
+    missing = [k for k in have if k not in sd]
     if missing:
         raise KeyError('适配器键缺失 %d 个，例如 %s' % (len(missing), missing[:3]))
     model.load_state_dict(sd, strict=False)
@@ -151,16 +178,18 @@ def merge_lora(model, trainable=False):
     """把 LoRA 折进基座并**还原为普通 nn.Linear**（导出的权重不再依赖本模块）。返回折入层数。
 
     trainable=False（默认）：折入后基座参数保持 `requires_grad=False`（导出/采样用，无需梯度）。
-    trainable=True：折入后把基座参数设为可训练（用于"合并后继续全量微调"的场景）。
+    trainable=True：折入后把**整个模型**的参数设为可训练（"合并后继续全量微调"）。
+    注意：旧实现只解冻被包装的 base，encoder 内非 Linear 参数、field/pos_predictor 等仍是冻结的
+    （独立审查实测只有 81.9% 可训练），与"全量微调"的语义不符 —— 现已改为全模型解冻。
     """
     hits = [(n, m) for n, m in model.named_modules() if isinstance(m, LoRALinear)]
     for name, mod in hits:
         base = mod.base
         base.weight.copy_(mod.merged_weight())
-        if trainable:
-            for p in base.parameters():
-                p.requires_grad_(True)
         _set_submodule(model, name, base)
+    if trainable:
+        for p in model.parameters():
+            p.requires_grad_(True)
     return len(hits)
 
 

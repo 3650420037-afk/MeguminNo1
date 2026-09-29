@@ -51,6 +51,8 @@ def main():
     ap.add_argument("--dims", nargs=4, type=int, default=[5, 3, 5, 5],
                     help="num_classes num_bond_types protein_dim ligand_dim（默认与 v10 家族一致）")
     ap.add_argument("--no-check", action="store_true", help="跳过折入后的前向一致性校验")
+    ap.add_argument("--allow-missing-lora", action="store_true",
+                    help="允许检查点缺适配器键（默认**拒绝**，因为那等于静默折入零增量）")
     args = ap.parse_args()
 
     ck = torch.load(args.ckpt, map_location="cpu", weights_only=False)
@@ -63,7 +65,11 @@ def main():
     if not lora.get('enabled', False):
         raise SystemExit('该检查点未启用 LoRA（config.model.lora.enabled 非真），无需折入')
 
-    mcfg_raw = cfg_raw.get('model', {}) if isinstance(cfg_raw, dict) else getattr(cfg_raw, 'model', {})
+    # 普通 dict config 也要能构造（MaskFillModelVN 走属性访问）→ 用 EasyDict 包一层。
+    # 独立审查实测：输入侧原先对普通 dict config 直接 AttributeError（只修了输出侧）。
+    from easydict import EasyDict
+    _m = cfg_raw.get('model', {}) if isinstance(cfg_raw, dict) else getattr(cfg_raw, 'model', {})
+    mcfg_raw = _m if not isinstance(_m, dict) else EasyDict(_m)
     model = build_from_config(mcfg_raw, tuple(args.dims))
     n = apply_lora(model, targets=tuple(lora.get('targets', ['encoder'])),
                    rank=int(lora.get('rank', 8)), alpha=float(lora.get('alpha', 16.0)),
@@ -73,6 +79,12 @@ def main():
     bad_u = [k for k in unexpected if 'lora_' not in k]
     if bad_m or bad_u:
         raise SystemExit('权重与模型不匹配：missing=%s unexpected=%s' % (bad_m[:5], bad_u[:5]))
+    # ⚠ 缺适配器键时旧版会 **rc=0 静默折入零增量**（等于该层悄悄回退基座）—— 独立审查实测发现。
+    miss_lora = [] if args.allow_missing_lora else [k for k in missing if 'lora_' in k]
+    if miss_lora:
+        raise SystemExit('检查点缺少 %d 个适配器张量（例如 %s）—— 拒绝静默折入零增量；'
+                         '若确认要按缺失状态折入，请显式加 --allow-missing-lora'
+                         % (len(miss_lora), miss_lora[:3]))
     print('[merge] 注入 %d 层；载入适配器 %d 个张量' % (n, len(lora_state_dict(model))))
 
     n_merged = merge_lora(model)

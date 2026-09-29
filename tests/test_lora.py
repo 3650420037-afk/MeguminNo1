@@ -175,6 +175,71 @@ def test_merge_trainable_option():
     print("PASS ⑧ merge_lora(trainable=True) 后基座参数可训练（供合并后继续微调）")
 
 
+def test_adapter_device_and_dtype_follow_base():
+    """C1（独立审查发现）：适配器必须与 base 同 device/dtype —— 否则 GPU 上首次前向必崩。
+
+    这里用 meta 设备复现（GPU 可能被占用）：base=meta 时适配器若仍在 cpu，前向会因设备不一致报错。
+    """
+    base = nn.Sequential(nn.Linear(8, 8))
+    base = base.to(device="meta")
+    m = Toy.__new__(Toy)          # 只借用容器
+    nn.Module.__init__(m)
+    m.encoder = base
+    m.frontier_pred = nn.Linear(8, 1)
+    apply_lora(m, targets=("encoder",), rank=2, alpha=4.0, verbose=False)
+    lin = [mod for mod in m.modules() if isinstance(mod, LoRALinear)][0]
+    assert lin.lora_A.weight.device == lin.base.weight.device == torch.device("meta"),         (lin.lora_A.weight.device, lin.base.weight.device)
+    # dtype 也跟随
+    b2 = nn.Sequential(nn.Linear(8, 8)).to(dtype=torch.float64)
+    m2 = Toy.__new__(Toy); nn.Module.__init__(m2); m2.encoder = b2; m2.frontier_pred = nn.Linear(8, 1)
+    apply_lora(m2, targets=("encoder",), rank=2, alpha=4.0, verbose=False)
+    l2 = [mod for mod in m2.modules() if isinstance(mod, LoRALinear)][0]
+    assert l2.lora_A.weight.dtype == torch.float64, l2.lora_A.weight.dtype
+    print("PASS ⑨ 适配器 device/dtype 跟随 base（meta/fp64 验证，修 C1）")
+
+
+def test_param_level_sharing_rejected():
+    """B2 残余缺口：两个不同 Linear 共用同一 weight 张量时，merge 会重复叠加 → 必须拒绝。"""
+    class P(nn.Module):
+        def __init__(self):
+            super().__init__()
+            a, b = nn.Linear(8, 8), nn.Linear(8, 8)
+            b.weight = a.weight          # 参数级共享（同一张量）
+            self.encoder = nn.Sequential(a, b)
+
+        def forward(self, x):
+            return self.encoder(x)
+
+    try:
+        apply_lora(P(), targets=("encoder",), rank=2, alpha=4.0, verbose=False)
+    except NotImplementedError as e:
+        print("PASS ⑩ 参数级权重共享被拒绝：%s" % str(e)[:50])
+        return
+    raise AssertionError("参数级共享应当报错")
+
+
+def test_load_on_non_lora_model_raises():
+    """load_lora_state_dict 在未注入 LoRA 的模型上必须报错（旧实现静默 no-op 还返回成功）。"""
+    m = Toy()
+    try:
+        load_lora_state_dict(m, {"encoder.0.lora_A.weight": torch.zeros(2, 8)})
+    except RuntimeError as e:
+        print("PASS ⑪ 无 LoRA 层时 load_lora_state_dict 显式报错：%s" % str(e)[:44])
+        return
+    raise AssertionError("应当报错")
+
+
+def test_merge_trainable_unfreezes_all():
+    """merge_lora(trainable=True) 应解冻**全模型**（旧实现只解冻被包装的 base，实测仅 81.9%）。"""
+    m = Toy()
+    apply_lora(m, targets=("encoder",), rank=2, alpha=4.0, verbose=False)
+    merge_lora(m, trainable=True)
+    n_all = sum(1 for _ in m.parameters())
+    n_tr = sum(1 for p in m.parameters() if p.requires_grad)
+    assert n_tr == n_all, (n_tr, n_all)
+    print("PASS ⑫ merge_lora(trainable=True) 解冻全模型（%d/%d）" % (n_tr, n_all))
+
+
 if __name__ == "__main__":
     test_init_is_bit_identical()
     test_base_frozen_adapters_trainable()
@@ -184,4 +249,8 @@ if __name__ == "__main__":
     test_no_match_raises()
     test_shared_weight_is_rejected()
     test_merge_trainable_option()
-    print("ALL PASS (8/8)")
+    test_adapter_device_and_dtype_follow_base()
+    test_param_level_sharing_rejected()
+    test_load_on_non_lora_model_raises()
+    test_merge_trainable_unfreezes_all()
+    print("ALL PASS (12/12)")

@@ -192,12 +192,24 @@ if __name__ == '__main__':
         lora_cfg = config.model.get('lora', None) or {}
         if lora_cfg.get('enabled', False):
             from utils.lora import apply_lora, count_trainable, unfreeze_patterns
+            # ⚠ YAML 里忘写方括号时 `targets: encoder` 是**字符串**，逐字符迭代会静默巨变
+            # （独立审查实测：`unfreeze: frontier_pred` 变成 list('frontier_pred') → 解冻 96% 参数）。
+            _tg, _uf = lora_cfg.get('targets', ['encoder']), lora_cfg.get('unfreeze', []) or []
+            for _k, _v in (('targets', _tg), ('unfreeze', _uf)):
+                if isinstance(_v, str):
+                    raise ValueError(
+                        "model.lora.%s 必须是列表（如 ['encoder']），收到字符串 %r —— "
+                        "字符串会被逐字符迭代、静默改变实验语义" % (_k, _v))
             n_lora = apply_lora(model,
-                                targets=tuple(lora_cfg.get('targets', ['encoder'])),
+                                targets=tuple(_tg),
                                 rank=int(lora_cfg.get('rank', 8)),
                                 alpha=float(lora_cfg.get('alpha', 16.0)))
-            extra = list(lora_cfg.get('unfreeze', []) or [])
+            extra = list(_uf)
             if extra:
+                _both = [p for p in extra if any(p in fp for fp in freeze_pats)]
+                if _both:
+                    logger.warning('LoRA: patterns %s 同时在 freeze_patterns 与 lora.unfreeze 中；'
+                                   '按执行顺序 **解冻生效**（LoRA 注入在冻结之后）' % _both)
                 got = unfreeze_patterns(model, extra)
                 logger.info('LoRA: 额外解冻 patterns=%s (%.3f M 参数)' % (extra, got / 1e6))
             tr, tot = count_trainable(model)

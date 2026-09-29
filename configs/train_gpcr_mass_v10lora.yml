@@ -80,6 +80,10 @@ train:
     beta1: 0.99
     beta2: 0.999
     param_groups:
+      # ⚠ 顺序即优先级（**先匹配先归属**）：适配器名字形如 encoder.interactions.*.lora_A.weight，
+      # 若 `lora_` 不排在最前，会被下面的 `encoder` 组吞掉 → 实测 324/324 张量落在 lr=1e-5
+      # （比 base lr 低 10 倍、比头低 50 倍），LoRA 臂会"看起来没效果"而被误判。独立审查发现。
+      - {pattern: lora_,         lr: 1.e-4}
       - {pattern: frontier_pred, lr: 5.e-4}
       - {pattern: encoder,       lr: 1.e-5}
 

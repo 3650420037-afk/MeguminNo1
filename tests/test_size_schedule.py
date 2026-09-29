@@ -139,6 +139,56 @@ def test_floor_takes_precedence_over_thermostat():
     print("PASS 下限期优先于恒温器")
 
 
+def _run_sampler_with_schedule(sched, max_steps=4, timeout=300):
+    """用给定 schedule 直接跑采样器子进程，返回 (rc, stdout+stderr)。"""
+    import io as _io
+    import subprocess
+    import tempfile
+    import yaml
+    cfg = yaml.safe_load(_io.open(os.path.join(ROOT, "configs", "sample_for_pdb_guided_l3.yml"),
+                                  encoding="utf-8"))
+    cfg.setdefault("sample", {})
+    cfg["sample"]["max_steps"] = max_steps
+    cfg["sample"]["num_samples"] = 1
+    cfg["sample"]["beam_size"] = 2
+    cfg["sample"].setdefault("threshold", {})["frontier_threshold_schedule"] = sched
+    cfg.setdefault("model", {})["checkpoint"] = os.path.join(ROOT, "models",
+                                                             "7-eonmol_ft_gpcr_v10.pt")
+    p = os.path.join(tempfile.mkdtemp(prefix="sched_bad_"), "cfg.yml")
+    with _io.open(p, "w", encoding="utf-8") as fh:
+        yaml.safe_dump(cfg, fh, allow_unicode=True)
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES="")
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "src", "sample_for_pdb.py"),
+                        "--pdb_path", os.path.join(ROOT, "data", "targets", "4EIY_A2A受体.pdb"),
+                        "--center=0,0,0", "--config", p, "--device", "cpu",
+                        "--outdir", os.path.join(os.path.dirname(p), "out")],
+                       cwd=ROOT, capture_output=True, text=True, errors="ignore",
+                       timeout=timeout, env=env)
+    return r.returncode, (r.stdout or "") + (r.stderr or "")
+
+
+def test_floor_ge_max_steps_fails_fast():
+    """floor_steps >= max_steps 必须**快速失败**，而不是静默产出 0 个分子（独立审查发现的 D5）。"""
+    rc, out = _run_sampler_with_schedule(
+        {"target_ha": 0, "slack": 4.0, "relax": 0.35, "tighten": 0.0,
+         "warmup_frac": 0.25, "floor_steps": 4.0, "floor_thr": -2.0, "ceiling_ha": 0.0},
+        max_steps=4)
+    assert rc != 0, "应当以非零码退出"
+    assert "floor_steps" in out and "max_steps" in out, out[-300:]
+    print("PASS S4 floor_steps>=max_steps 快速失败（rc=%d，含明确错误信息）" % rc)
+
+
+def test_tiny_ceiling_fails_fast():
+    """ceiling_ha<=2 等于禁掉生长 → 也要快速失败。"""
+    rc, out = _run_sampler_with_schedule(
+        {"target_ha": 0, "slack": 4.0, "relax": 0.35, "tighten": 0.0,
+         "warmup_frac": 0.25, "floor_steps": 0.0, "floor_thr": -2.0, "ceiling_ha": 2.0},
+        max_steps=6)
+    assert rc != 0, "应当以非零码退出"
+    assert "ceiling_ha" in out, out[-300:]
+    print("PASS S5 ceiling_ha 过小快速失败（rc=%d）" % rc)
+
+
 if __name__ == "__main__":
     test_off_is_identity()
     test_warmup_no_intervention()
@@ -148,4 +198,6 @@ if __name__ == "__main__":
     test_real_trajectory_never_relaxes_when_on_target()
     test_floor_s2_hard_size_floor()
     test_floor_takes_precedence_over_thermostat()
-    print("ALL PASS (8/8)")
+    test_floor_ge_max_steps_fails_fast()
+    test_tiny_ceiling_fails_fast()
+    print("ALL PASS (10/10)")

@@ -232,21 +232,31 @@ if __name__ == '__main__':
     _sched = config.sample.threshold.get('frontier_threshold_schedule', None) or {}
     _sch_target = float(_sched.get('target_ha', 0) or 0)
     _sch_floor = float(_sched.get('floor_steps', 0) or 0)
+    _sch_ceiling = float(_sched.get('ceiling_ha', 0) or 0)   # S3 硬上限（默认 0=关）
     _sch_slack = float(_sched.get('slack', 4.0))
     _sch_relax = float(_sched.get('relax', 0.35))
     _sch_tighten = float(_sched.get('tighten', 0.0))
     _sch_warmup = float(_sched.get('warmup_frac', 0.25))
-    _sch_stats = {'relaxed': 0, 'tightened': 0, 'kept': 0, 'floored': 0}
-    if _sch_target > 0 or _sch_floor > 0:
+    _sch_stats = {'relaxed': 0, 'tightened': 0, 'kept': 0, 'floored': 0, 'capped': 0}
+    # 参数校验（独立审查发现）：下限期 ≥ 步数上限时，分子几乎不可能自行停止 →
+    # pool.finished 为空、SMILES.txt 为空，但进程 rc=0、design.py 打印 "SDF=0" 却算"成功"。
+    # 这种静默空产出必须拦在启动时。
+    if _sch_floor >= float(config.sample.max_steps):
+        raise SystemExit('[尺寸调度] floor_steps=%.0f 必须 < max_steps=%d，否则永远长不到可停长度、'
+                         '只会产出 0 个分子（静默空产出）' % (_sch_floor, config.sample.max_steps))
+    if _sch_ceiling > 0 and _sch_ceiling <= 2:
+        raise SystemExit('[尺寸调度] ceiling_ha=%.0f 过小（初始就有 1 个原子，上限 ≤2 等于禁掉生长）'
+                         % _sch_ceiling)
+    if _sch_target > 0 or _sch_floor > 0 or _sch_ceiling > 0:
         logger.info('尺寸调度开启: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f '
-                    '| floor_steps=%.0f floor_thr=%.2f'
+                    '| floor_steps=%.0f floor_thr=%.2f | ceiling_ha=%.0f'
                     % (_sch_target, _sch_slack, _sch_relax, _sch_tighten, _sch_warmup,
-                       _sch_floor, float(_sched.get('floor_thr', -2.0))))
+                       _sch_floor, float(_sched.get('floor_thr', -2.0)), _sch_ceiling))
 
     def _thr_for(data_i, step_i):
         """返回该分子本步应使用的 frontier 阈值（调度关闭时恒为 _frontier_thr）。"""
         if _sch_target <= 0 and _sch_floor <= 0:
-            return _frontier_thr
+            return _frontier_thr   # 上限单独存在时不需要改阈值（截断在循环里做）
         try:
             n_ha = int(data_i.ligand_context_element.numel())
         except Exception:
@@ -302,6 +312,17 @@ if __name__ == '__main__':
                 )
 
                 for data_next in data_next_list:
+                    # 硬尺寸上限（S3，默认关闭）：到顶就强制判定"完成"。
+                    # 依据（2026-09-29 诊断）：v10term@5500 的 strict 掉分主要来自 **MW>500 占 17%**
+                    # （官方 0%）—— 分布**向两侧变宽**，故需要的是"窗口"而非"更大"。
+                    # 因为每步恰好 1 个重原子（§5.47），上限即"最多长到 ceiling_ha 个重原子"。
+                    if _sch_ceiling > 0:
+                        try:
+                            if int(data_next.ligand_context_element.numel()) >= _sch_ceiling:
+                                data_next.status = STATUS_FINISHED
+                                _sch_stats['capped'] += 1
+                        except Exception:
+                            pass
                     if data_next.status == STATUS_FINISHED:
                         try:
                             rdmol = reconstruct_from_generated_with_edges(data_next)
@@ -369,11 +390,15 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info('Terminated. Generated molecules will be saved.')
 
-    if _sch_target > 0 or _sch_floor > 0:
-        logger.info('尺寸调度统计: 下限期 %d 次 | 下调 %d 次 | 上调 %d 次 | 保持 %d 次 '
-                    '(target_ha=%.1f relax=%.2f floor_steps=%.0f)'
-                    % (_sch_stats['floored'], _sch_stats['relaxed'], _sch_stats['tightened'],
-                       _sch_stats['kept'], _sch_target, _sch_relax, _sch_floor))
+    if not pool.finished:
+        logger.warning('[Pool] **本次采样完成 0 个分子** —— 请检查 floor_steps/max_steps/阈值；'
+                       '下游会看到 SDF=0 但进程 rc=0（历史上有过静默空产出）')
+    if _sch_target > 0 or _sch_floor > 0 or _sch_ceiling > 0:
+        logger.info('尺寸调度统计: 下限期 %d 次 | 上限截断 %d 次 | 下调 %d 次 | 上调 %d 次 | 保持 %d 次 '
+                    '(target_ha=%.1f relax=%.2f floor_steps=%.0f ceiling_ha=%.0f)'
+                    % (_sch_stats['floored'], _sch_stats['capped'], _sch_stats['relaxed'],
+                       _sch_stats['tightened'], _sch_stats['kept'],
+                       _sch_target, _sch_relax, _sch_floor, _sch_ceiling))
 
     # # Save sdf mols
     sdf_dir = os.path.join(log_dir, 'SDF')

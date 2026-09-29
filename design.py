@@ -87,7 +87,8 @@ def build_config(args, center, out_cfg):
         getattr(args, "_thr", 0.0))
     # 轨迹内尺寸调度 S1（默认关闭）：只有 target_ha>0 才写进配置 → 关闭时不产生任何行为差异
     if (float(getattr(args, "schedule_target_ha", 0) or 0) > 0
-            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0):
+            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0
+            or float(getattr(args, "schedule_ceiling_ha", 0) or 0) > 0):
         s["threshold"]["frontier_threshold_schedule"] = {
             "target_ha": float(args.schedule_target_ha),
             "slack": float(args.schedule_slack),
@@ -96,6 +97,7 @@ def build_config(args, center, out_cfg):
             "warmup_frac": float(args.schedule_warmup),
             "floor_steps": float(args.schedule_floor_steps),
             "floor_thr": float(args.schedule_floor_thr),
+            "ceiling_ha": float(args.schedule_ceiling_ha),
         }
     s["relax_output"] = bool(args.relax)
     ensure_dir(os.path.dirname(out_cfg))
@@ -137,9 +139,10 @@ def main():
                          "不传=用**该权重自己的推荐值**(见 models/threshold_recommendations.json; "
                          "v10/官方 推荐 0.0、v3 推荐 -0.5); 传 0.0 可强制回原版行为")
     ap.add_argument("--schedule-target-ha", type=float, default=0.0,
-                    help="**轨迹内尺寸调度 S1**（默认 0=关闭，关闭时行为与历史逐位一致）："
-                         "目标重原子数；对每个在长分子按步数线性外推期望值，落后超过 --schedule-slack "
-                         "就把该分子本步的 frontier 阈值下调 --schedule-relax（鼓励继续长）")
+                    help="**尺寸调度 S1 恒温器**（默认 0=关闭，关闭时行为与历史逐位一致）：目标重原子数。"
+                         "⚠ 机制已于 2026-09-29 修正为**绝对尺寸**判据（不再是按步数线性外推 —— "
+                         "实测每步恰好 +1 个重原子，线性期望永不触发）：n_ha < target−slack 时把阈值下调 "
+                         "--schedule-relax；n_ha > target+slack 且给了 --schedule-tighten 时上调")
     ap.add_argument("--schedule-slack", type=float, default=4.0, help="S1 容差（重原子数）")
     ap.add_argument("--schedule-relax", type=float, default=0.35, help="S1 落后时下调幅度")
     ap.add_argument("--schedule-tighten", type=float, default=0.0,
@@ -151,9 +154,18 @@ def main():
                          "因实测每步恰好 1 个重原子，等价于'分子至少 N 个重原子'，方向由构造保证")
     ap.add_argument("--schedule-floor-thr", type=float, default=-2.0,
                     help="S2 下限期使用的阈值（越小越强制继续生长）")
+    ap.add_argument("--schedule-ceiling-ha", type=float, default=0.0,
+                    help="**S3 硬尺寸上限**（默认 0=关闭）：分子长到该重原子数即强制判完成。"
+                         "依据 2026-09-29 诊断：strict 掉分主要来自 MW>500（v10term@5500 占 17%、官方 0%）")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()
+    # 只给 --schedule-slack/--schedule-tighten 而不给 target/floor/ceiling 时，这两个参数会被静默忽略
+    if (args.schedule_target_ha <= 0 and args.schedule_floor_steps <= 0
+            and args.schedule_ceiling_ha <= 0
+            and (args.schedule_slack != 4.0 or args.schedule_tighten != 0.0)):
+        print('[提示] 只给了 --schedule-slack/--schedule-tighten 而没有 --schedule-target-ha / '
+              '--schedule-floor-steps / --schedule-ceiling-ha → 调度整体关闭，这两个参数**不会生效**')
 
     ckpt_for_thr = args.ckpt or DEFAULT_CKPT
     if args.frontier_threshold is None:
@@ -186,12 +198,14 @@ def main():
         "开" if args.lam > 0 else "关", args.lam, args.diversity_w, bool(args.relax)))
     print("  停止阈值 frontier_threshold = %+.2f  (来源: %s)" % (args._thr, thr_src))
     if (float(getattr(args, "schedule_target_ha", 0) or 0) > 0
-            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0):
+            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0
+            or float(getattr(args, "schedule_ceiling_ha", 0) or 0) > 0):
         print("  尺寸调度 = 开: S1(target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f)"
-              " | S2(floor_steps=%.0f floor_thr=%.2f)"
+              " | S2(floor_steps=%.0f floor_thr=%.2f) | S3(ceiling_ha=%.0f)"
               % (args.schedule_target_ha, args.schedule_slack, args.schedule_relax,
                  args.schedule_tighten, args.schedule_warmup,
-                 args.schedule_floor_steps, args.schedule_floor_thr))
+                 args.schedule_floor_steps, args.schedule_floor_thr,
+                 args.schedule_ceiling_ha))
     print("  输出 = %s" % run_dir)
     print("=" * 74, flush=True)
 
