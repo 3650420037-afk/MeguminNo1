@@ -172,11 +172,14 @@ def do_swap(targets):
         if not os.path.exists(src_res):
             log("  [swap] %s 缺少 staging results，跳过" % t)
             continue
-        for name in ("results.csv", "compounds.csv", "admet_screen.csv", "top_candidates.csv",
-                     "docking_summary.csv", "rejected.csv", "run_manifest.json"):
-            s = os.path.join(src_res, name)
-            if os.path.exists(s):
-                shutil.copy2(s, os.path.join(RESULTS, name if t == "A2A" else name))
+        # 旧库结构：A2A 的清单在 results/ 根目录；其余靶点在 results/<T>/
+        root_files = ("results.csv", "compounds.csv", "admet_screen.csv", "top_candidates.csv",
+                      "docking_summary.csv", "rejected.csv", "run_manifest.json", "summary.txt")
+        if t == "A2A":
+            for name in root_files:
+                src_f = os.path.join(src_res, name)
+                if os.path.exists(src_f):
+                    shutil.copy2(src_f, os.path.join(RESULTS, name))
         # 每靶点子目录（旧库结构：results/<T>/）
         dst_t = os.path.join(RESULTS, t)
         os.makedirs(dst_t, exist_ok=True)
