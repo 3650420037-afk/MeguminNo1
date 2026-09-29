@@ -47,7 +47,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--baseline",
                     default=os.path.join("outputs", "ab_v10_s60", "a", "pretrained_Pocket2Mol.pt_s2024"),
-                    help="官方基线的 arm 目录（同协议采样产物）")
+                    help="官方基线的 arm 目录。⚠ 默认这个是 **n=50/steps60** 的旧协议臂；"
+                         "扫描用的是 n=60/steps40 —— 报告里会显式标注该口径差，"
+                         "同协议官方臂由 outputs/night_pipeline_v10/run_s1_experiment.py 产出。")
+    ap.add_argument("--baseline-protocol", default="n=50/steps60（旧臂；与本次扫描 n=60/steps40 不完全同协议）",
+                    help="写进报告的口径说明，避免后来者误读")
     ap.add_argument("--n-requested", type=int, default=60)
     ap.add_argument("--topk", type=int, default=2)
     ap.add_argument("--sel", default=SEL_CSV, help="扫描产物 CSV（默认 sel_v10term.csv）")
@@ -67,6 +71,11 @@ def main():
 
     with io.open(os.path.join(NIGHT, "decide_v10term_report.md"), "w", encoding="utf-8") as fh:
         log("# v10term 生成级判定（自动生成，判据 §5.41 预登记）\n", fh)
+        log("> ⚠ **口径提示**：官方基线臂 = `%s`\n> 口径 = %s。\n"
+            "> 若要与候选做**严格同协议**比较，请用 `run_s1_experiment.py` 产出的同协议官方臂"
+            "（n=60/beam50/steps40，种子 2024/2025）替换 `--baseline`。\n"
+            "> 尺寸/strict 的比较对协议敏感（steps 决定尺寸上限），**跨协议只能当参考**。\n"
+            % (args.baseline, args.baseline_protocol), fh)
         arms = ["official=%s" % args.baseline]
         for name, d in cands:
             tag = os.path.splitext(os.path.basename(name))[0]
