@@ -44,8 +44,9 @@ def log(msg, path):
         fh.write(line + "\n")
 
 
-def run_design(seed, arm, ckpt, n, beam, steps, thr, dry, s2=(24, -2.0)):
-    tag = {"on": "s1on", "off": "s1off", "s2": "s2floor", "official": "official"}[arm]
+def run_design(seed, arm, ckpt, n, beam, steps, thr, dry, s2=(24, -2.0), s3=(24, 32.0)):
+    tag = {"on": "s1on", "off": "s1off", "s2": "s2floor", "s3": "s3window",
+           "official": "official"}[arm]
     outdir = os.path.join(BASE, "%s_s%d" % (tag, seed))
     cmd = [PY, os.path.join(ROOT, "design.py"), "--target", "A2A",
            "--num-samples", str(n), "--beam", str(beam), "--max-steps", str(steps),
@@ -57,6 +58,12 @@ def run_design(seed, arm, ckpt, n, beam, steps, thr, dry, s2=(24, -2.0)):
     elif arm == "s2":
         # S2 = 硬尺寸下限：前 N 步强制继续长（每步 1 原子 ⇒ 至少 N 个重原子），方向由构造保证
         cmd += ["--schedule-floor-steps", str(s2[0]), "--schedule-floor-thr", str(s2[1])]
+    elif arm == "s3":
+        # S3 = **硬尺寸窗**（下限 + 上限）：依据 2026-09-29 诊断 —— v10term@5500 的 strict 掉分
+        # 主要来自 MW>500 占 17%（官方 0%）与 MW<250 占 10%，即分布**向两侧变宽** →
+        # 用下限抬小尾、上限截大尾。上限取 32 个重原子（≈ MW 450–480，仍 < strict 的 500 上限）。
+        cmd += ["--schedule-floor-steps", str(s3[0]), "--schedule-floor-thr", "-2.0",
+                "--schedule-ceiling-ha", str(s3[1])]
     if dry:
         print(" ".join(cmd))
         return outdir, 0
@@ -112,6 +119,10 @@ def main():
     ap.add_argument("--s2-floor-steps", type=float, default=24.0,
                     help="S2 下限期步数（= 至少要长到的重原子数）")
     ap.add_argument("--s2-floor-thr", type=float, default=-2.0, help="S2 下限期阈值")
+    ap.add_argument("--s3-seeds", nargs="+", type=int, default=[2024, 2025],
+                    help="跑 S3（硬尺寸窗：下限+上限）的种子；默认 2 种子筛选")
+    ap.add_argument("--s3-floor-steps", type=float, default=24.0, help="S3 下限（重原子数）")
+    ap.add_argument("--s3-ceiling-ha", type=float, default=32.0, help="S3 上限（重原子数，≈MW 450–480）")
     ap.add_argument("--official-seeds", nargs="+", type=int, default=[2024, 2025],
                     help="额外跑**同协议官方臂**的种子（判据④需要；默认前两个种子）")
     ap.add_argument("--official-ckpt",
@@ -127,17 +138,19 @@ def main():
     arms = []
     plan = [(seed, arm) for seed in args.seeds for arm in ("off", "on")]
     plan += [(seed, "s2") for seed in args.s2_seeds]                   # S2 硬下限（先 2 种子）
+    plan += [(seed, "s3") for seed in args.s3_seeds]                   # S3 硬尺寸窗（先 2 种子）
     plan += [(seed, "official") for seed in args.official_seeds]       # 同协议官方臂
     for seed, arm in plan:
         ck = args.official_ckpt if arm == "official" else args.ckpt
         d, rc = run_design(seed, arm, ck, args.n, args.beam, args.max_steps,
                            args.thr, args.dry_run,
-                           s2=(args.s2_floor_steps, args.s2_floor_thr))
+                           s2=(args.s2_floor_steps, args.s2_floor_thr),
+                           s3=(args.s3_floor_steps, args.s3_ceiling_ha))
         log("  seed %d | %-8s | rc=%d | %s" % (seed, arm, rc, os.path.relpath(d, ROOT)), logf)
         if not args.dry_run and rc == 0:
             smi = find_smiles(d)
             if smi:
-                tag = {"on": "s1on", "off": "s1off", "s2": "s2floor",
+                tag = {"on": "s1on", "off": "s1off", "s2": "s2floor", "s3": "s3window",
                        "official": "official"}[arm]
                 arms.append(("%s_s%d" % (tag, seed), smi))
     if args.dry_run:
@@ -155,12 +168,12 @@ def main():
 
     rows = {r["arm"]: r for r in csv.DictReader(io.open(out_csv, encoding="utf-8-sig"))}
     print("\n%-12s %8s %7s %8s %8s %8s" % ("arm", "MW中位", "HA中位", "strict%", "生成数", "落区"))
-    mws = {"off": [], "on": [], "s2": []}
-    inband = {"off": 0, "on": 0, "s2": 0}
-    all_pairs = [(s_, "off") for s_ in args.seeds] + [(s_, "on") for s_ in args.seeds] +                 [(s_, "s2") for s_ in args.s2_seeds]
+    mws = {"off": [], "on": [], "s2": [], "s3": []}
+    inband = {"off": 0, "on": 0, "s2": 0, "s3": 0}
+    all_pairs = [(s_, "off") for s_ in args.seeds] + [(s_, "on") for s_ in args.seeds] +                 [(s_, "s2") for s_ in args.s2_seeds] + [(s_, "s3") for s_ in args.s3_seeds]
     for seed, arm in all_pairs:
             k = {"off": "s1off_s%d" % seed, "on": "s1on_s%d" % seed,
-                 "s2": "s2floor_s%d" % seed}[arm]
+                 "s2": "s2floor_s%d" % seed, "s3": "s3window_s%d" % seed}[arm]
             r = rows.get(k)
             if not r:
                 continue
@@ -171,12 +184,12 @@ def main():
             mws[arm].append(mw)
             print("%-14s %8.1f %7.1f %8.1f %8d %8s" % (k, mw, ha, sr, nf, "IN" if ok else "--"))
     print()
-    for arm in ("off", "on", "s2"):
+    for arm in ("off", "on", "s2", "s3"):
         v = mws[arm]
         if v:
             spread = 100.0 * (max(v) - min(v)) / (sum(v) / len(v))
-            print("%-8s: 落区 %d/%d | 跨种子极差 %.1f%% | MW 均值 %.1f"
-                  % ({"off": "S1关", "on": "S1恒温", "s2": "S2下限"}[arm],
+            print("%-10s: 落区 %d/%d | 跨种子极差 %.1f%% | MW 均值 %.1f"
+                  % ({"off": "S1关", "on": "S1恒温", "s2": "S2下限", "s3": "S3尺寸窗"}[arm],
                      inband[arm], len(v), spread, sum(v) / len(v)))
     if len(mws["off"]) == len(mws["on"]) and mws["off"]:
         u, p = mannwhitney_u(mws["off"], mws["on"])
