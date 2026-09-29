@@ -44,6 +44,20 @@ class MaskFillModelVN(Module):
             self.frontier_pos_weight = float(config.get('frontier_pos_weight', 1.0))
         except Exception:
             self.frontier_pos_weight = 1.0
+        # M8 处方②升级档（2026-09-29）：**逐样本**类别平衡（默认 False = 与现状逐位一致）。
+        # 动机（实测 src/scripts/measure_frontier_balance.py）：frontier 正类**微平均仅 20.6%**，
+        # 且**逐样本极不均匀**（p10 0.061 / p50 0.265 / p90 1.000）——全局常数 pos_weight 无法同时
+        # 适配"上下文只剩两个原子"(几乎全正) 与"上下文很大"(几乎全负) 这两类样本，
+        # 这正是"终止校准随检查点/种子漂移"的一个可疑机制。
+        # 打开后：pos_weight = clip(n_neg / n_pos, clip[0], clip[1])（按当前 batch 的标签统计，
+        # 不跨 batch 累积，故不引入状态）；clip 默认 [1, 10] 防止极小样本把权重推到极端。
+        # 回退：删掉配置键或设 frontier_balance: false（默认），行为与官方实现完全相同。
+        self.frontier_balance = bool(config.get('frontier_balance', False))
+        _clip = config.get('frontier_balance_clip', [1.0, 10.0]) or [1.0, 10.0]
+        try:
+            self.frontier_balance_clip = (float(_clip[0]), float(_clip[1]))
+        except Exception:
+            self.frontier_balance_clip = (1.0, 10.0)
         # self.protein_frontier_pred = FrontierLayerVN(in_sca=in_sca, in_vec=in_vec,
         #                                                                     hidden_dim_sca=128, hidden_dim_vec=32)
         self.pos_predictor = PositionPredictor(in_sca=in_sca, in_vec=in_vec,
@@ -51,6 +65,27 @@ class MaskFillModelVN(Module):
 
         self.smooth_cross_entropy = SmoothCrossEntropyLoss(reduction='mean', smoothing=0.1)
         self.bceloss_with_logits = nn.BCEWithLogitsLoss()
+
+    def _frontier_pos_weight(self, target, device, dtype):
+        """frontier 损失的 pos_weight 三档（默认档返回 None = 官方实现，逐位一致）。
+
+        ① frontier_balance=False（默认）且 frontier_pos_weight==1.0 → None（官方行为）
+        ② frontier_pos_weight=w>1 → 全局常数 w（v10term 用的 2.0）
+        ③ frontier_balance=True → **逐样本** n_neg/n_pos（clip 到 frontier_balance_clip）
+
+        实测依据见 src/scripts/measure_frontier_balance.py：正类微平均仅 20.6%，
+        且逐样本 p10=0.061 / p50=0.265 / p90=1.000 —— 全局常数无法同时适配两类样本。
+        """
+        if getattr(self, 'frontier_balance', False):
+            with torch.no_grad():
+                n_pos = target.sum().clamp_min(1.0)
+                n_neg = (target.numel() - target.sum()).clamp_min(0.0)
+                w = torch.clamp(n_neg / n_pos,
+                                *getattr(self, 'frontier_balance_clip', (1.0, 10.0)))
+            return w.reshape(1).to(device=device, dtype=dtype)
+        if abs(getattr(self, 'frontier_pos_weight', 1.0) - 1.0) < 1e-9:
+            return None
+        return torch.tensor([self.frontier_pos_weight], device=device, dtype=dtype)
 
     def sample_init(self,
         compose_feature,
@@ -389,14 +424,16 @@ class MaskFillModelVN(Module):
             input=y_protein_frontier_pred,
             target=y_protein_frontier.view(-1, 1).float()
         ).clamp_max(10.)
+        # frontier 的 pos_weight 三档（默认第 1 档 = 官方实现，逐位一致）：
+        #   ① frontier_balance=False 且 frontier_pos_weight=1.0 → pos_weight=None（官方行为）
+        #   ② frontier_pos_weight=w>1 → 全局常数加权（v10term 用的 2.0）
+        #   ③ frontier_balance=True → 逐样本 n_neg/n_pos（clip 后）加权，覆盖②
+        _tgt_frontier = y_frontier.view(-1, 1).float()
         loss_frontier = F.binary_cross_entropy_with_logits(
             input = y_frontier_pred,
-            target = y_frontier.view(-1, 1).float(),
-            # 1.0 → None，**与官方实现逐位一致**；>1 → 对"应继续生长"的正类加权（M8 处方②）
-            pos_weight = (None if abs(getattr(self, 'frontier_pos_weight', 1.0) - 1.0) < 1e-9
-                          else torch.tensor([self.frontier_pos_weight],
-                                            device=y_frontier_pred.device,
-                                            dtype=y_frontier_pred.dtype))
+            target = _tgt_frontier,
+            pos_weight = self._frontier_pos_weight(_tgt_frontier, y_frontier_pred.device,
+                                                   y_frontier_pred.dtype)
         ).clamp_max(10.)
         loss_pos = -torch.log(
             self.pos_predictor.get_mdn_probability(abs_pos_mu, pos_sigma, pos_pi, pos_generate) + 1e-16
