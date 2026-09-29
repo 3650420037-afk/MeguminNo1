@@ -48,3 +48,7 @@ Thumbs.db
 src/gui/build/
 src/gui/dist/
 src/gui/*.spec
+
+# 夜间评估链的**脚本**要留痕（产物/日志仍忽略）：
+!outputs/night_pipeline_v10/
+!outputs/night_pipeline_v10/*.py
