@@ -1,0 +1,72 @@
+=== gpcr_multi_v1 ===
+index_pairs=17192 train=14613 test=2579
+missing_files=0
+split_dupes=0 split_not_in_index=0 index_not_in_split=0
+consistency=OK
+pocket_files=['pocket_5HT1A.pdb', 'pocket_5HT2A.pdb', 'pocket_5HT2B.pdb', 'pocket_A2A.pdb', 'pocket_B2AR.pdb', 'pocket_D2.pdb', 'pocket_D3.pdb', 'pocket_H1.pdb', 'pocket_M1.pdb', 'pocket_OPRK1.pdb', 'pocket_OPRM1.pdb']
+per_pocket_density: n_pockets=11 min=623 median=735 max=5384
+    pocket_A2A.pdb                            5384
+    pocket_D3.pdb                             4734
+    pocket_5HT2B.pdb                          1332
+    pocket_B2AR.pdb                            794
+    pocket_5HT2A.pdb                           770
+    pocket_5HT1A.pdb                           735
+    pocket_D2.pdb                              719
+    pocket_H1.pdb                              717
+    pocket_OPRK1.pdb                           701
+    pocket_M1.pdb                              683
+    pocket_OPRM1.pdb                           623
+build_report:
+  method=autodock_vina_docking_into_experimental_pockets
+  total=17192
+  train=14613
+  val=2579
+  pockets=11 (5HT1A,5HT2A,5HT2B,A2A,B2AR,D2,D3,H1,M1,OPRK1,OPRM1)
+  per_pocket=[('5HT1A', 735), ('5HT2A', 770), ('5HT2B', 1332), ('A2A', 5384), ('B2AR', 794), ('D2', 719), ('D3', 4734), ('H1', 717), ('M1', 683), ('OPRK1', 701), ('OPRM1', 623)]
+  exhaustiveness=8
+  mind_min=1.50
+  split_by=pair_stratified_by_target (seed=2021, val_ratio=0.150)
+  NOTE=验证集与训练集共享口袋: 评测靶点(A2A)本身在训练集中, 本划分度量的是对同一口袋生成新分子的能力(配体空间泛化), 不是跨靶点泛化
+  drug_like=MW[250,600] LogP<=6.0 QED>=0.30 rings>=2
+  pose_min_dist: n=17192 median=2.844 p10=2.140 min=1.555
+  skipped=2057
+    skip A2A/c00_lig_019: qed_0.270
+    skip A2A/c00_lig_056: qed_0.286
+    skip A2A/c00_lig_069: mw_227
+    skip A2A/c00_lig_095: qed_0.107
+    skip A2A/c00_lig_098: qed_0.127
+    skip A2A/c00_lig_108: qed_0.199
+    skip A2A/c00_lig_109: qed_0.216
+    skip A2A/c00_lig_111: qed_0.271
+    skip A2A/c00_lig_114: qed_0.212
+    skip A2A/c00_lig_126: qed_0.287
+    skip A2A/c00_lig_132: qed_0.230
+    skip A2A/c00_lig_134: qed_0.196
+    skip A2A/c00_lig_135: qed_0.102
+    skip A2A/c00_lig_148: qed_0.214
+    skip A2A/c00_lig_163: qed_0.250
+    skip A2A/c00_lig_190: mw_245
+    skip A2A/c00_lig_191: qed_0.197
+    skip A2A/c00_lig_192: mw_234
+    skip A2A/c00_lig_221: qed_0.267
+    skip A2A/c00_lig_233: qed_0.193
+    skip A2A/c00_lig_237: qed_0.272
+    skip A2A/c00_lig_238: qed_0.277
+    skip A2A/c00_lig_270: qed_0.292
+    skip A2A/c00_lig_271: mw_248
+    skip A2A/c00_lig_285: qed_0.205
+    skip A2A/c00_lig_302: qed_0.257
+    skip A2A/c00_lig_309: qed_0.284
+    skip A2A/c00_lig_314: qed_0.278
+    skip A2A/c00_lig_317: qed_0.232
+    skip A2A/c00_lig_320: mw_225
+    skip A2A/c00_lig_324: qed_0.300
+    skip A2A/c00_lig_325: qed_0.233
+    skip A2A/c00_lig_327: qed_0.270
+    skip A2A/c00_lig_359: qed_0.163
+    skip A2A/c00_lig_363: sanitize_fail
+    skip A2A/c00_lig_377: qed_0.284
+    skip A2A/c00_lig_397: mw_245
+    skip A2A/c00_lig_407: qed_0.279
+    skip A2A/c00_lig_427: qed_0.281
+    skip A2A/c00_lig_431: mw_208
