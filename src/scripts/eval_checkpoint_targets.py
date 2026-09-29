@@ -26,7 +26,11 @@ c) 除非 `--skip-dock`, 再调 `src/scripts/ab_docking_compare.py`(**子进程*
 `--out` CSV 每行 = 靶点/种子/完成数/QED/SA/骨架/穿模/MW中位/重原子中位/strict率;
 有对接时再附 Vina中位 / Δ vs 官方 / 重原子 / LE / 是否退化。
 注意 `ha_med` 是**生成口径**的重原子中位, `dock_ha_med` 是**对接口径**(真正对接
-成功那批分子的重原子中位), 两者不可互换。
+成功那批分子的重原子中位), 两者不可互换; `dock_le10_pct` 是 Vina<=-10 的**百分数**
+(0-100, 来自 ab_docking_compare 的 frac_le10, 不是 0-1 的小数)。
+可复现列: ckpt_path/ckpt_bytes/ckpt_md5、num_samples/beam/max_steps/frontier_threshold、
+threshold_src(阈值来自显式参数还是默认)、official_ckpt/official_md5(跟谁比的)、
+script_ver/run_utc。
 
 目录布局(每个 (靶点, 种子) 一个目录, 便于单独复核)
 --------------------------------------------------
@@ -35,9 +39,11 @@ c) 除非 `--skip-dock`, 再调 `src/scripts/ab_docking_compare.py`(**子进程*
         arm_gen_metrics.csv             b) 的尺寸/strict
         ab_docking.csv                  c) 的成对对接结果
         arm_gen_metrics_vs_official.csv b') 与官方臂的尺寸/strict 对照
-        eval_meta.json                  该目录产物对应的采样参数(复用核对用)
+        eval_meta.json                  本目录产物对应的检查点/采样/对接口径(复用核对用,
+                                        按检查点分条目, 一个目录里评过多个检查点也留痕)
         select.log / arm_gen_metrics.log / ab_docking.log
-        <检查点名>/samples/<会话>/      采样产物(SMILES.txt / SDF/)
+        <检查点名>/samples/<会话>/      采样产物(SMILES.txt / SDF/), 该目录下 select 写的
+                                        cfg.yml 是这次采样的真实口径(复用核对真源)
         ab_dock/                       A/B 两臂各自的采样与对接产物
 
 安全与纪律(写进代码, 不是口号)
@@ -46,11 +52,19 @@ c) 除非 `--skip-dock`, 再调 `src/scripts/ab_docking_compare.py`(**子进程*
    `ab_docking_compare.py` 作为 **Vina 对接**的分块并发。理由: 采样要占 GPU, 评测机
    上往往还有训练在跑, 并发采样会 OOM —— 省下的时间远不够赔一次重跑。
 2. 任何子进程返回码非 0 **只记录、不中断**(`run()` 连启动异常都兜住), 该行写进
-   `errors` 列后继续下一个 (靶点, 种子)。
-3. **不重跑已有产物**: `--keep-dir` 下已有该 (靶点, 种子) 的指标 CSV 就直接复用;
-   采样产物在而指标 CSV 丢了, 也只在 **CPU 上离线复算**(口径与子脚本同源, 见
-   `offline_gen_row`), 不再占 GPU。复用时会核对 `eval_meta.json` 里的采样参数,
-   不一致就打警告并在行内留痕。
+   `errors` 列后继续下一个 (靶点, 种子)。`--timeout` 可给每个子进程加秒级上限,
+   超时杀掉子进程并记 TIMEOUT(默认 0 = 不限时; 杀的是直接子进程, 它自己 spawn 的
+   对接子进程可能残留 —— 见文末"仍未修的问题")。
+3. **不重跑已有产物, 但绝不静默复用**: `--keep-dir` 下已有该 (靶点, 种子) 的指标
+   CSV 就直接复用; 采样产物在而指标 CSV 丢了, 也只在 **CPU 上离线复算**(口径与子
+   脚本同源, 见 `offline_gen_row`), 不再占 GPU。复用前有三道核对, 任何一道不过就
+   **不复用**(宁可重算), 并在 `errors` 列留痕:
+     a) CSV 的 `ckpt` 列必须属于本次检查点 —— 目录是 (靶点,种子) 级而不是检查点级,
+        换了检查点后旧 CSV 必须失效(否则会把 A 的分数记到 B 头上);
+     b) `eval_meta.json` **按检查点**记录采样口径(num_samples/beam/max_steps/seed/
+        frontier_threshold)与对接口径(exhaustiveness), 不一致 -> PARAM_MISMATCH;
+     c) 外部脚本产生的采样目录(官方臂 / A-B 臂)读 `cfg.yml` 核对那次采样的真实口径,
+        读不到 -> PROVENANCE_UNKNOWN(允许复用但必须留痕)。
 4. **单种子标注 PROVISIONAL**: `--seeds` 少于 2 个时所有行 status=PROVISIONAL,
    不得据此晋级(依据: `ab_docking_compare.py` 实测种子间 Vina 中位噪声约 0.7
    kcal/mol, 远大于同臂重复运行的 ~0.14)。
@@ -58,6 +72,16 @@ c) 除非 `--skip-dock`, 再调 `src/scripts/ab_docking_compare.py`(**子进程*
    两臂分子大小差得多时, 原始 Vina 分的差异主要来自尺寸而非亲和力, 必须以 LE 复核。
 6. **不调用 git**, 不修改任何既有文件: 本脚本只写 `--keep-dir` 与 `--out` 下的文件。
 7. 退出码: 0 = 至少有一行可用; 1 = 全部 (靶点, 种子) 都不可用。
+8. **每一行自带可复现信息**: 检查点相对路径/字节数/md5、采样参数、frontier 阈值及其
+   来源、官方臂文件名与 md5、脚本版本与运行 UTC 时间; 明细参数另存
+   `eval_meta.json`(按检查点分条目)。
+
+仍未修的问题(交付时需人确认)
+------------------------------
+- 子进程超时被杀时, `ab_docking_compare.py` 自己 `Popen` 出来的 Vina 子进程不会被
+  连带杀掉(Windows 无进程组语义), 可能残留跑完。超时值要给足, 或超时后人工
+  `tasklist | findstr docking_pipeline` 看一眼。
+- 尺寸差 >15% 用的是重原子/MW **中位**的比值; 这不是预登记判据, 只是警告。
 
 开销(先算账再跑)
 ----------------
@@ -78,12 +102,17 @@ c) 除非 `--skip-dock`, 再调 `src/scripts/ab_docking_compare.py`(**子进程*
     # 先看会跑哪些子命令(不执行任何子进程, 不建目录、不写任何文件):
     python src/scripts/eval_checkpoint_targets.py --ckpt <ckpt> --dry-run
 
+    # 给每个子进程加 4 小时上限(超时只记录, 不中断整批):
+    python src/scripts/eval_checkpoint_targets.py --ckpt <ckpt> --timeout 14400
+
 ⚠ 本脚本会通过子进程调用 `src/sample_for_pdb.py`(**需要 CUDA**), 因此**不要在 GPU
-   正在训练时执行**。`--help` 与 `--dry-run` 都不加载 torch/rdkit, 可安全运行。
+   正在训练时执行**。`--help` 与 `--dry-run` 都不加载 torch/rdkit, 也不写任何文件
+   (包括 pocket.pdb), 可安全运行。
 """
 import argparse
 import csv
 import glob
+import hashlib
 import json
 import os
 import subprocess
@@ -116,17 +145,23 @@ CLASH_MAX = 0.5           # 同 select_ckpt_by_generation.CLASH_MAX
 
 SELECT_COLS = ["n_finished", "qed_med", "sa_med", "n_scaffold", "clash_rate", "mind_med"]
 ARM_COLS = ["n_finished", "mw_med", "ha_med", "strict_rate"]
-AB_COLS = ["n_smiles", "n_docked", "vina_med"]
+# 必须覆盖我们真正读的每一列: 旧版 ab_docking_compare 的输出没有 ha_med/le_med,
+# 只校验前三列会把"旧口径 CSV"当成本次产物复用 -> 对接口径的尺寸/LE 列静默变空。
+AB_COLS = ["n_smiles", "n_docked", "vina_med", "frac_le10", "ha_med", "le_med"]
+
+SCRIPT_VER = "eval_checkpoint_targets.py@2026-09-29+review1"
 
 # 汇总 CSV 的固定列序(某列缺失也照写, 便于增量落盘以及多检查点结果拼接)
 SUMMARY_COLS = [
-    "target", "seed", "ckpt", "status",
+    "target", "seed", "ckpt", "ckpt_path", "ckpt_bytes", "ckpt_md5", "status",
     "n_finished", "qed_med", "sa_med", "n_scaffold", "clash_rate", "mind_med",
     "mw_med", "ha_med", "strict_rate",
     "dock_vina_med", "dock_delta_vs_official", "dock_ha_med", "dock_le_med",
-    "dock_n_smiles", "dock_n_docked", "dock_frac_le10",
+    "dock_n_smiles", "dock_n_docked", "dock_le10_pct",
     "ha_ratio_vs_official", "mw_ratio_vs_official", "strict_ratio_vs_official",
     "degraded", "reasons",
+    "num_samples", "beam", "max_steps", "frontier_threshold", "threshold_src",
+    "official_ckpt", "official_md5", "script_ver", "run_utc",
     "gen_source", "gen_rc", "arm_rc", "dock_rc", "errors",
 ]
 
@@ -214,32 +249,171 @@ def read_csv(path, need_cols, tag=""):
     return rows
 
 
-def run(cmd, log_path, tag):
+def rows_belong_to(rows, expected):
+    """CSV 行里是否有属于 `expected` 检查点/臂的行(按原样或 stem 匹配)。
+
+    目录是 (靶点,种子) 级、不是检查点级: 同一个目录先后评过两个检查点时, 旧 CSV 会被
+    下一次运行看到。列名再对也不能证明"这份产物是本次检查点的", 所以复用前必须查
+    `ckpt` 列 —— 否则会把上一个检查点的 QED/Vina 记到本次检查点名下。
+    """
+    if not rows or not expected:
+        return True
+    for r in rows:
+        v = r.get("ckpt") or r.get("arm")
+        if v and (v == expected or stem(v) == stem(expected)):
+            return True
+    return False
+
+
+def utc_now():
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def file_fingerprint(path):
+    """(字节数, mtime, md5); 任何异常 -> ("", "", ""), 绝不影响主流程。"""
+    try:
+        size = os.path.getsize(path)
+        mt = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(os.path.getmtime(path)))
+        h = hashlib.md5()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(1 << 20), b""):
+                h.update(chunk)
+        return size, mt, h.hexdigest()
+    except Exception as e:  # noqa: BLE001
+        log("  [警告] 计算 %s 的指纹失败: %r" % (rel(path), e))
+        return "", "", ""
+
+
+def read_yaml(path):
+    try:
+        import yaml  # 子脚本硬依赖, 这里延迟导入以免影响 --help/--dry-run 启动
+        with open(path, encoding="utf-8-sig") as f:
+            return yaml.safe_load(f) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def arm_caliber(arm_parent):
+    """读 `<arm_parent>/cfg.yml` —— select_ckpt_by_generation 为那次采样写的真实口径。
+
+    这是**外部产物**(官方臂/A-B 臂)唯一可信的口径证据: CSV 里没有参数列, 只有这份
+    cfg 记录了 num_samples/beam/max_steps/seed/frontier_threshold 与用的哪个权重。
+    """
+    c = read_yaml(os.path.join(arm_parent, "cfg.yml"))
+    if not isinstance(c, dict):
+        return None
+    s = c.get("sample") or {}
+    return {
+        "ckpt": os.path.basename(str((c.get("model") or {}).get("checkpoint") or "")),
+        "num_samples": s.get("num_samples"),
+        "beam": s.get("beam_size"),
+        "max_steps": s.get("max_steps"),
+        "seed": s.get("seed"),
+        "frontier_threshold": (s.get("threshold") or {}).get("frontier_threshold"),
+    }
+
+
+def _cmp_val(key, actual, expect):
+    if key in ("num_samples", "beam", "max_steps", "seed"):
+        try:
+            return int(actual), int(expect)
+        except (TypeError, ValueError):
+            return actual, expect
+    if key == "frontier_threshold":
+        try:
+            return (float(actual) if actual is not None else 0.0,
+                    float(expect) if expect is not None else 0.0)
+        except (TypeError, ValueError):
+            return actual, expect
+    return actual, expect
+
+
+def verify_arm_caliber(arm_parent, ckpt, expect, label):
+    """核对某采样产物目录的口径; 返回 (state, note)。
+
+    state: True=一致, False=明确不一致(不可复用), None=无 cfg.yml/无法核对(可复用但留痕)。
+    """
+    if not arm_parent or not os.path.isdir(arm_parent):
+        return None, "PROVENANCE_UNKNOWN(%s 产物目录不存在, 口径无法核对)" % label
+    cal = arm_caliber(arm_parent)
+    if cal is None:
+        return None, ("PROVENANCE_UNKNOWN(%s 无 cfg.yml, 复用产物的采样口径未核对)"
+                      % label)
+    diff = []
+    if stem(cal.get("ckpt") or "") != stem(ckpt):
+        diff.append("ckpt=%s(产物)!=%s(本次)" % (cal.get("ckpt"), os.path.basename(ckpt)))
+    for k in ("num_samples", "beam", "max_steps", "seed", "frontier_threshold"):
+        a, e = _cmp_val(k, cal.get(k), expect.get(k))
+        if a != e:
+            diff.append("%s=%s(产物)!=%s(本次)" % (k, a, e))
+    if diff:
+        return False, "PROVENANCE_MISMATCH(%s: %s)" % (label, ", ".join(diff))
+    return True, ""
+
+
+def gen_caliber(args, target, seed):
+    """本次 (靶点,种子) 采样口径(写进 eval_meta.json / 用于复用核对)。"""
+    return {
+        "target": target, "seed": int(seed), "num_samples": int(args.num_samples),
+        "beam": int(args.beam), "max_steps": int(args.max_steps),
+        # 归一成"实际生效值": 不传 = 子脚本默认 0.0, 免得 "没传" 与 "--frontier-threshold 0.0"
+        # 被当成两个口径(会导致每次重跑都误报 PARAM_MISMATCH)
+        "frontier_threshold": (float(args.frontier_threshold)
+                               if args.frontier_threshold is not None else 0.0),
+    }
+
+
+def dock_caliber(args, target, seed):
+    return {
+        "target": target, "seed": int(seed), "n": int(args.num_samples),
+        "beam": int(args.beam), "max_steps": int(args.max_steps),
+        "frontier_threshold": (float(args.frontier_threshold)
+                               if args.frontier_threshold is not None else 0.0),
+        "exhaustiveness": int(args.exhaustiveness),
+    }
+
+
+def run(cmd, log_path, tag, timeout=0):
     """执行子进程, stdout/stderr 追加进 log_path; **永不抛异常**, 返回 returncode。
 
     纪律 2: 非 0 只记录、不中断 —— "一个靶点失败就整批崩掉"会白烧掉其它靶点已经
-    等到的 GPU 时间。启动异常(解释器/脚本找不到)返回 -1。
+    等到的 GPU 时间。启动异常(解释器/脚本找不到)返回 -1, 超时返回 -9。
+    子进程统一 PYTHONIOENCODING=utf-8, 免得中文/emoji 输出在 cp936 下变成乱码落进日志。
     """
-    ensure_dir(os.path.dirname(log_path))
+    try:
+        ensure_dir(os.path.dirname(log_path))
+    except Exception as e:  # noqa: BLE001
+        log("  [警告] %s 日志目录建不了(%r), 仍尝试执行(输出丢弃)" % (tag, e))
+    env = dict(os.environ, PYTHONIOENCODING="utf-8")
     t0 = time.time()
     try:
         with open(log_path, "a", encoding="utf-8", errors="ignore") as lf:
-            lf.write("\n$ %s\n" % " ".join(cmd))
+            lf.write("\n$ %s\n" % subprocess.list2cmdline(cmd))
             lf.flush()
-            rc = subprocess.run(cmd, cwd=ROOT, stdout=lf, stderr=subprocess.STDOUT).returncode
+            rc = subprocess.run(cmd, cwd=ROOT, stdout=lf, stderr=subprocess.STDOUT,
+                                timeout=(timeout or None), env=env).returncode
+    except subprocess.TimeoutExpired:
+        msg = "%s 超时(>%ds), 已杀掉该子进程; 产物可能不完整" % (tag, timeout)
+        log("  [警告] %s" % msg)
+        _append_log(log_path, "[超时] %s\n" % msg)
+        return -9
     except Exception as e:  # noqa: BLE001
         log("  [警告] %s 子进程启动失败: %r" % (tag, e))
-        try:
-            with open(log_path, "a", encoding="utf-8", errors="ignore") as lf:
-                lf.write("\n[启动失败] %r\n" % (e,))
-        except Exception:  # noqa: BLE001
-            pass
+        _append_log(log_path, "[启动失败] %r\n" % (e,))
         return -1
     if rc != 0:
         log("  [警告] %s 子进程返回码 %d (已记录, 继续); 日志 %s" % (tag, rc, rel(log_path)))
     else:
         log("  [ok] %s 完成 (%.0f s)" % (tag, time.time() - t0))
     return rc
+
+
+def _append_log(log_path, text):
+    try:
+        with open(log_path, "a", encoding="utf-8", errors="ignore") as lf:
+            lf.write(text)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def latest_session(parent):
@@ -249,6 +423,7 @@ def latest_session(parent):
     return cands[-1] if cands else None
 
 
+# ---------------------------------------------------------------- 复用核对(eval_meta.json)
 def load_meta(base):
     try:
         with open(os.path.join(base, "eval_meta.json"), encoding="utf-8") as f:
@@ -257,37 +432,106 @@ def load_meta(base):
         return None
 
 
-def save_meta(base, d):
-    if not d:
-        return
+def meta_arm(old, ckpt_name):
+    """取 meta 里**该检查点**的产物口径条目; 兼容旧格式(顶层 ckpt/gen)。"""
+    if not isinstance(old, dict):
+        return None
+    arms = old.get("arms")
+    if isinstance(arms, dict) and isinstance(arms.get(ckpt_name), dict):
+        return arms[ckpt_name]
+    if old.get("ckpt") == ckpt_name and isinstance(old.get("gen"), dict):
+        return {"gen": old["gen"]}
+    return None
+
+
+def precheck_meta(base, ckpt_name, gen_meta, dock_meta, dry_run):
+    """复用前核对: 返回 (note, known)。
+
+    note 非空 = 已有产物与本轮口径不一致(MISMATCH 字样), 调用方**不得复用**;
+    known=False = 目录里没有该检查点的口径记录(复用要额外记 NO_META)。
+    """
+    if dry_run:
+        return "", True
+    rec = meta_arm(load_meta(base), ckpt_name)
+    if not rec:
+        return "", False
+    msgs = []
+    if isinstance(rec.get("gen"), dict) and rec["gen"] != gen_meta:
+        msgs.append("GEN_PARAM_MISMATCH(产物 %s != 本次 %s)" % (rec["gen"], gen_meta))
+    if dock_meta and isinstance(rec.get("dock"), dict) and rec["dock"] != dock_meta:
+        msgs.append("DOCK_PARAM_MISMATCH(产物 %s != 本次 %s)" % (rec["dock"], dock_meta))
+    return "; ".join(msgs), True
+
+
+def record_meta(base, target, ckpt_name, gen_meta, dock_meta, gen_src, note, extra):
+    """按检查点落盘口径记录。
+
+    只有当"这一行的数值确实来自本次口径的产物"时才覆盖 gen/dock; 复用了一份口径不
+    一致(或来源不明)的产物时, 保留旧记录并把 flagged 写进去 —— 否则下一次运行读到
+    被覆盖后的 meta, 会把不一致当成一致。
+    """
+    old = load_meta(base) or {}
+    arms = old.get("arms") if isinstance(old.get("arms"), dict) else {}
+    if old.get("ckpt") and isinstance(old.get("gen"), dict) and old["ckpt"] not in arms:
+        arms[old["ckpt"]] = {"gen": old["gen"], "gen_source": "legacy"}
+    cur = dict(arms.get(ckpt_name) or {})
+    bad = ("MISMATCH" in (note or "")) or ("PROVENANCE_UNKNOWN" in (note or ""))
+    if bad and str(gen_src).startswith("reused"):
+        cur["flagged"] = note
+    else:
+        cur.pop("flagged", None)
+        cur["gen"] = gen_meta
+        if dock_meta:
+            cur["dock"] = dock_meta
+    cur["gen_source"] = gen_src
+    cur["checked_utc"] = utc_now()
+    cur["script"] = SCRIPT_VER
+    if extra:
+        cur.update(extra)
+    arms[ckpt_name] = cur
+    out = {"meta_version": 2, "script": SCRIPT_VER, "target": target,
+           "updated_utc": utc_now(), "arms": arms}
     try:
         with open(os.path.join(base, "eval_meta.json"), "w", encoding="utf-8") as f:
-            json.dump(d, f, ensure_ascii=False, indent=1)
+            json.dump(out, f, ensure_ascii=False, indent=1)
     except Exception as e:  # noqa: BLE001
         log("  [提示] eval_meta.json 写不了: %r" % (e,))
 
 
 def write_rows(path, rows):
     """按 rows[0] 的键写 CSV(用于把离线复算结果落盘成子脚本同款 schema)。"""
-    ensure_dir(os.path.dirname(path))
-    cols = list(rows[0].keys())
-    with open(path, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
-        w.writeheader()
-        for r in rows:
-            w.writerow(r)
+    try:
+        ensure_dir(os.path.dirname(path))
+        cols = list(rows[0].keys())
+        with open(path, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=cols, extrasaction="ignore")
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log("  [警告] %s 写不了(%r); 该行改为只留在汇总里" % (rel(path), e))
+        return False
 
 
 def write_summary(rows, out):
-    """整表重写(行数很少); 每完成一个 (靶点,种子) 就写一次 -> 中途被打断也留痕。"""
-    ensure_dir(os.path.dirname(out))
-    tmp = out + ".tmp"
-    with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=SUMMARY_COLS, extrasaction="ignore")
-        w.writeheader()
-        for r in rows:
-            w.writerow(r)
-    os.replace(tmp, out)
+    """整表重写(行数很少); 每完成一个 (靶点,种子) 就写一次 -> 中途被打断也留痕。
+
+    磁盘满/无权限时**只警告不中断**: 已经等到的 GPU 结果不能因为写不了 CSV 就整批丢。
+    """
+    try:
+        ensure_dir(os.path.dirname(out))
+        tmp = out + ".tmp"
+        with open(tmp, "w", encoding="utf-8-sig", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=SUMMARY_COLS, extrasaction="ignore")
+            w.writeheader()
+            for r in rows:
+                w.writerow(r)
+        os.replace(tmp, out)
+        return True
+    except Exception as e:  # noqa: BLE001
+        log("  [警告] 汇总 CSV 写失败(%r); 结果只在上面的 stdout 里, 请先复制下来" % (e,))
+        return False
 
 
 # ---------------------------------------------------------------- 离线复算(不占 GPU)
@@ -397,7 +641,8 @@ def build_ab_cmd(ckpt, target, seed, args, work, out):
     cmd = [sys.executable, AB, "--ckpts", BASELINE, ckpt, "--target", target,
            "--n", str(args.num_samples), "--beam", str(args.beam),
            "--max-steps", str(args.max_steps), "--seeds", str(seed),
-           "--parallel", str(args.parallel), "--work", work, "--out", out]
+           "--parallel", str(args.parallel), "--exhaustiveness", str(args.exhaustiveness),
+           "--work", work, "--out", out]
     if args.frontier_threshold is not None:
         cmd += ["--frontier-threshold", str(args.frontier_threshold)]
     return cmd
@@ -446,88 +691,169 @@ def pick_arm(rows, key):
 
 
 # ---------------------------------------------------------------- 三个步骤
-def step_generate(ckpt, target, seed, args, base):
+def step_generate(ckpt, target, seed, args, base, meta_note="", meta_known=True):
     """(a) 生成级: 复用已有指标 CSV -> 复用 A/B 的 select 产物 -> 离线复算 -> 才真跑 select。
 
-    返回 (rows, rc, source, note)。**任何情况下都不重复占用 GPU**。
+    返回 (rows, rc, source, notes)。**任何情况下都不重复占用 GPU**。
+    复用三条铁律(见模块 docstring 纪律 3): 查 ckpt 归属 -> 查 meta 口径 -> 查 cfg.yml
+    真实口径; 任何一条明确不过就不复用(顶多重算), 只"来源不明"才允许带痕复用。
     """
     art = os.path.join(base, stem(ckpt))
     out = os.path.join(base, "select_gen_metrics.csv")
     ckpt_name = os.path.basename(ckpt)
+    notes = []
+    gen_mismatch = "GEN_PARAM_MISMATCH" in (meta_note or "")
+    expect = gen_caliber(args, target, seed)
 
+    # (1) 本目录已有的生成级指标 CSV
     rows = read_csv(out, SELECT_COLS, "select")
+    if rows and not rows_belong_to(rows, ckpt_name):
+        log("  [警告] %s 里的 ckpt 属于 %s, 不是本次的 %s -> 不复用(防止张冠李戴)"
+            % (rel(out), sorted({r.get("ckpt") for r in rows if r.get("ckpt")}), ckpt_name))
+        notes.append("STALE_CKPT(%s 属于别的检查点)" % os.path.basename(out))
+        rows = None
+    if rows and gen_mismatch:
+        log("  [警告] %s 口径与本次不一致(%s) -> 不复用" % (rel(out), meta_note))
+        rows = None
     if rows:
-        return rows, 0, "reused-csv", ""
+        if not meta_known:
+            # 这份 CSV 没有 cfg.yml 之类的旁证, 口径只可能由 eval_meta.json 背书
+            notes.append("NO_META(该目录无本检查点口径记录, 复用 %s 无法核对)"
+                         % os.path.basename(out))
+        return rows, 0, "reused-csv", notes
 
-    # A/B 自己生成的 select 产物就在本 (靶点,种子) 目录下, 也是真品 -> 可复用(省一次采样)
+    # (2) A/B 自己生成的 select 产物就在本 (靶点,种子) 目录下, 同口径才是真品
     for name in ab_names([BASELINE, ckpt])[1:]:
-        cand = os.path.join(base, "ab_dock", "%s_s%d" % (name, seed), "gen_metrics.csv")
+        arm_dir = os.path.join(base, "ab_dock", "%s_s%d" % (name, seed))
+        cand = os.path.join(arm_dir, "gen_metrics.csv")
         rows = read_csv(cand, SELECT_COLS, "ab-select")
+        if rows and not rows_belong_to(rows, ckpt_name):
+            rows = None
+        if rows:
+            # 外部脚本写出来的产物, 一律读它自己的 cfg.yml 核对那次采样的真实口径
+            state, vnote = verify_arm_caliber(arm_dir, ckpt, expect, "A/B臂")
+            if state is False:
+                log("  [警告] %s -> 不复用" % vnote)
+                notes.append(vnote)
+                rows = None
+            elif state is None:
+                notes.append(vnote)
         if rows:
             log("  [复用] 生成级口径取自 A/B 的 select 产物: %s" % rel(cand))
-            return rows, 0, "reused-ab-csv", ""
+            return rows, 0, "reused-ab-csv", notes
 
+    # (3) 采样产物在、指标 CSV 丢了 -> CPU 离线复算, 不再占 GPU
     sess = latest_session(art)
+    if sess and args.dry_run:
+        log("  [dry-run] 已有采样产物 %s -> 正式跑时会 CPU 离线复算(不执行)" % rel(sess))
+        sess = None
+    if sess:
+        # 旧会话也要能证明自己是本次口径: 读它同目录下 select 写的 cfg.yml
+        state, vnote = verify_arm_caliber(art, ckpt, expect, "本检查点臂")
+        if state is False:
+            log("  [警告] %s -> 不复用旧会话, 重新采样" % vnote)
+            notes.append(vnote)
+            sess = None
+        elif state is None:
+            notes.append(vnote)
     if sess:
         log("  [复用] 已有采样产物 %s -> CPU 离线复算, 不再占 GPU" % rel(sess))
         row = offline_gen_row(sess, target, art, ckpt_name)
         if row:
-            if not args.dry_run:
-                write_rows(out, [row])
-            return [row], 0, "reused-session(offline)", ""
+            if row.get("n_finished") is not None and row["n_finished"] < args.num_samples:
+                notes.append("SESSION_SHORT(会话只有 %s 个分子 < 请求 %d: 可能被中断)"
+                             % (row["n_finished"], args.num_samples))
+            if not args.dry_run and not write_rows(out, [row]):
+                notes.append("OFFLINE_CSV_WRITE_FAILED")
+            return [row], 0, "reused-session(offline)", notes
 
     cmd = build_select_cmd(ckpt, target, seed, args, base, out)
     if args.dry_run:
-        log("  [dry-run] " + " ".join(cmd))
-        return [], 0, "dry-run", ""
+        log("  [dry-run] " + subprocess.list2cmdline(cmd))
+        return [], 0, "dry-run", notes
 
-    rc = run(cmd, os.path.join(base, "select.log"), "生成(select)")
+    rc = run(cmd, os.path.join(base, "select.log"), "生成(select)", args.timeout)
     rows = read_csv(out, SELECT_COLS, "select")
-    if rows:
-        return rows, rc, "fresh", ""
+    if rows and rows_belong_to(rows, ckpt_name):
+        return rows, rc, "fresh", notes
     # 子进程可能"采样成功但 CSV 没写成/被截断" -> 从产物离线复算, 绝不白烧 GPU
     sess = latest_session(art)
     if sess:
         row = offline_gen_row(sess, target, art, ckpt_name)
         if row:
             write_rows(out, [row])
-            return [row], rc, "post-run-session(offline)", "采样成功但指标CSV缺失, 已离线复算"
-    return [], rc, "failed", "生成级无产物"
+            note = "采样成功但指标CSV缺失, 已离线复算"
+            if row.get("n_finished") is not None and row["n_finished"] < args.num_samples:
+                note += "(且只有 %s 个分子 < 请求 %d, 可能被中断)" % (row["n_finished"],
+                                                                    args.num_samples)
+            notes.append(note)
+            return [row], rc, "post-run-session(offline)", notes
+    return [], rc, "failed", notes + ["生成级无产物"]
 
 
-def step_arm_metrics(arms, baseline_name, out, log_path, tag, args):
-    """(b) 尺寸/strict 口径。纯 CPU 读 SMILES, 重跑它不算"重跑产物"。"""
+def step_arm_metrics(arms, baseline_name, out, log_path, tag, args, expect_any=None):
+    """(b) 尺寸/strict 口径。纯 CPU 读 SMILES, 重跑它不算"重跑产物"。
+
+    `expect_any` = 这份 CSV 里必须出现的臂名(填了才允许复用): 目录是 (靶点,种子) 级,
+    换了检查点后旧的 arm_gen_metrics.csv 里根本没有本次的臂, 直接复用会让
+    mw_med/ha_med/strict_rate 三列静默变空。CPU 重算只要几秒, 不值得冒这个险。
+    """
     rows = read_csv(out, ARM_COLS, "arm")
+    if rows and expect_any and not any(rows_belong_to(rows, k) for k in expect_any):
+        log("  [警告] %s 里没有本次臂 %s 的行(旧检查点的产物) -> 重算"
+            % (rel(out), list(expect_any)))
+        rows = None
     if rows:
         return rows, 0, "reused"
     if args.dry_run:
-        log("  [dry-run] " + " ".join(build_arm_cmd(arms, baseline_name, out)))
+        log("  [dry-run] " + subprocess.list2cmdline(build_arm_cmd(arms, baseline_name, out)))
         return [], 0, "dry-run"
     arms = [(n, p) for n, p in arms if p and os.path.isdir(p)]
     if not arms:
         log("  [警告] arm_gen_metrics 无可用产物目录, 跳过(%s)" % tag)
         return [], 0, "no-arm"
     cmd = build_arm_cmd(arms, baseline_name, out)
-    rc = run(cmd, log_path, tag)
+    rc = run(cmd, log_path, tag, args.timeout)
     return read_csv(out, ARM_COLS, "arm") or [], rc, "fresh"
 
 
-def step_dock(ckpt, target, seed, args, base):
-    """(c) 与官方权重的同种子成对 A/B(生成 + Vina 对接)。"""
+def step_dock(ckpt, target, seed, args, base, meta_note="", meta_known=True):
+    """(c) 与官方权重的同种子成对 A/B(生成 + Vina 对接)。
+
+    返回 (rows, rc, source, notes)。AB_COLS 已覆盖 ha_med/le_med/frac_le10: 旧版
+    ab_docking CSV 只有 Vina 三列, 复用它会让我们悄悄丢掉尺寸/LE 对照。
+    """
     out = os.path.join(base, "ab_docking.csv")
+    our_arm = ab_names([BASELINE, ckpt])[1]
+    notes = []
+    dock_mismatch = "DOCK_PARAM_MISMATCH" in (meta_note or "")
     rows = read_csv(out, AB_COLS, "ab")
+    if rows and not rows_belong_to(rows, our_arm):
+        log("  [警告] %s 里没有本次臂 %s 的行(可能是别的检查点的结果) -> 不复用"
+            % (rel(out), our_arm))
+        notes.append("STALE_AB_CSV(%s 不含 %s)" % (os.path.basename(out), our_arm))
+        rows = None
+    if rows and dock_mismatch:
+        log("  [警告] %s 对接口径与本次不一致 -> 不复用" % rel(out))
+        rows = None
     if rows:
-        return rows, 0, "reused-csv", ""
+        if not meta_known:
+            notes.append("NO_META(该目录无本检查点口径记录, 复用 %s 无法核对)"
+                         % os.path.basename(out))
+        return rows, 0, "reused-csv", notes
     work = os.path.join(base, "ab_dock")
     cmd = build_ab_cmd(ckpt, target, seed, args, work, out)
     if args.dry_run:
-        log("  [dry-run] " + " ".join(cmd))
-        return [], 0, "dry-run", ""
-    rc = run(cmd, os.path.join(base, "ab_docking.log"), "对接 A/B(ab_docking_compare)")
+        log("  [dry-run] " + subprocess.list2cmdline(cmd))
+        return [], 0, "dry-run", notes
+    rc = run(cmd, os.path.join(base, "ab_docking.log"), "对接 A/B(ab_docking_compare)",
+             args.timeout)
     rows = read_csv(out, AB_COLS, "ab")
     if not rows:
-        return [], rc, "failed", "对接无产物"
-    return rows, rc, "fresh", ""
+        return [], rc, "failed", notes + ["对接无产物"]
+    if not rows_belong_to(rows, our_arm):
+        return [], rc, "failed", notes + ["对接 CSV 里没有本次臂 %s" % our_arm]
+    return rows, rc, "fresh", notes
 
 
 # ---------------------------------------------------------------- 判定
@@ -539,7 +865,7 @@ def derive(gen, arm_row, base_arm_row, ab_row, base_ab_row, ref_ha):
     d = {"ha_ratio_vs_official": None, "mw_ratio_vs_official": None,
          "strict_ratio_vs_official": None, "dock_vina_med": None,
          "dock_delta_vs_official": None, "dock_ha_med": None, "dock_le_med": None,
-         "dock_n_smiles": None, "dock_n_docked": None, "dock_frac_le10": None,
+         "dock_n_smiles": None, "dock_n_docked": None, "dock_le10_pct": None,
          "degraded": "NA", "reasons": ""}
     reasons = []
 
@@ -549,7 +875,10 @@ def derive(gen, arm_row, base_arm_row, ab_row, base_ab_row, ref_ha):
         d["dock_le_med"] = fnum(ab_row, "le_med")
         d["dock_n_smiles"] = inum(ab_row, "n_smiles")
         d["dock_n_docked"] = inum(ab_row, "n_docked")
-        d["dock_frac_le10"] = fnum(ab_row, "frac_le10")
+        # ab_docking_compare 的 frac_le10 是**百分数**(0-100), 列名照抄会让人以为是 0-1
+        d["dock_le10_pct"] = fnum(ab_row, "frac_le10")
+        if d["dock_ha_med"] is None or d["dock_le_med"] is None:
+            reasons.append("对接CSV缺 ha_med/le_med(旧版口径), 尺寸/LE 对照不可用")
 
     # ---- 相对官方臂的尺寸/strict/生成级硬判据 ----
     if arm_row and base_arm_row:
@@ -630,10 +959,15 @@ def derive(gen, arm_row, base_arm_row, ab_row, base_ab_row, ref_ha):
 # ---------------------------------------------------------------- 汇总行
 def make_row(target, seed, ckpt_name, gen, arm_row, base_arm_row, ab_row, base_ab_row,
              gen_src, multi_seed, errors=None, gen_rc=None, arm_rc=None,
-             dock_rc=None, ref_ha=None):
-    """拼一行汇总。缺失一律空字符串(不写 "None"), 便于 pandas/Excel 直接读。"""
+             dock_rc=None, ref_ha=None, prov=None):
+    """拼一行汇总。缺失一律空字符串(不写 "None"), 便于 pandas/Excel 直接读。
+
+    `prov` 是可复现信息(检查点路径/md5、采样参数、阈值来源、官方臂、脚本版本/时间),
+    整批共享, 由 main 算好后传进来 —— 每行都自洽, 便于把多检查点的 CSV 直接拼起来。
+    """
     gen = gen or {}
     arm = arm_row or {}
+    prov = prov or {}
     d = derive(gen, arm_row, base_arm_row, ab_row, base_ab_row, ref_ha)
 
     def pick(*vals):
@@ -647,6 +981,9 @@ def make_row(target, seed, ckpt_name, gen, arm_row, base_arm_row, ab_row, base_a
         status += "/PARTIAL"
     return {
         "target": target, "seed": seed, "ckpt": ckpt_name, "status": status,
+        "ckpt_path": prov.get("ckpt_path", ""),
+        "ckpt_bytes": prov.get("ckpt_bytes", ""),
+        "ckpt_md5": prov.get("ckpt_md5", ""),
         "n_finished": pick(inum(gen, "n_finished"), inum(arm, "n_finished")),
         "qed_med": pick(gen.get("qed_med"), arm.get("qed_med")),
         "sa_med": pick(gen.get("sa_med"), arm.get("sa_med")),
@@ -662,37 +999,26 @@ def make_row(target, seed, ckpt_name, gen, arm_row, base_arm_row, ab_row, base_a
         "dock_le_med": pick(d["dock_le_med"]),
         "dock_n_smiles": pick(d["dock_n_smiles"]),
         "dock_n_docked": pick(d["dock_n_docked"]),
-        "dock_frac_le10": pick(d["dock_frac_le10"]),
+        "dock_le10_pct": pick(d["dock_le10_pct"]),
         "ha_ratio_vs_official": pick(d["ha_ratio_vs_official"]),
         "mw_ratio_vs_official": pick(d["mw_ratio_vs_official"]),
         "strict_ratio_vs_official": pick(d["strict_ratio_vs_official"]),
         "degraded": d["degraded"], "reasons": d["reasons"],
+        "num_samples": prov.get("num_samples", ""),
+        "beam": prov.get("beam", ""),
+        "max_steps": prov.get("max_steps", ""),
+        "frontier_threshold": prov.get("frontier_threshold", ""),
+        "threshold_src": prov.get("threshold_src", ""),
+        "official_ckpt": prov.get("official_ckpt", ""),
+        "official_md5": prov.get("official_md5", ""),
+        "script_ver": SCRIPT_VER,
+        "run_utc": prov.get("run_utc", ""),
         "gen_source": gen_src,
         "gen_rc": "" if gen_rc is None else gen_rc,
         "arm_rc": "" if arm_rc is None else arm_rc,
         "dock_rc": "" if dock_rc is None else dock_rc,
         "errors": "; ".join(errors) if errors else "",
     }
-
-
-def check_meta(base, target, ckpt_name, meta_gen, gen_src, dry_run):
-    """核对复用产物的采样参数; 返回需写进 errors 列的提示(可能为空)。"""
-    if dry_run:
-        return ""
-    old = load_meta(base)
-    if old is None:
-        save_meta(base, {"target": target, "ckpt": ckpt_name, "gen": meta_gen})
-        return ("NO_META(该目录无 eval_meta.json, 复用产物的采样参数无法核对)"
-                if gen_src.startswith("reused") else "")
-    prev = old.get("ckpt")
-    if prev and prev != ckpt_name:
-        log("  [警告] 该目录上次评测的是 %s, 本次是 %s -> 产物可能不属于本次检查点"
-            % (prev, ckpt_name))
-    if gen_src.startswith("reused") and old.get("gen") and old["gen"] != meta_gen:
-        log("  [警告] 复用产物的采样参数与本次不一致: 产物=%s 本次=%s (不重跑, 但结论需注明口径)"
-            % (old["gen"], meta_gen))
-        return "PARAM_MISMATCH(产物 %s != 本次 %s)" % (old["gen"], meta_gen)
-    return ""
 
 
 # ---------------------------------------------------------------- 主流程
@@ -716,12 +1042,18 @@ def main():
                     help="随机种子(>=2 个才不标 PROVISIONAL), 默认 2024 2025")
     ap.add_argument("--parallel", type=int, default=6,
                     help="**只透传给 A/B 的 Vina 对接**分块并发数, 默认 6; 采样永远串行")
+    ap.add_argument("--exhaustiveness", type=int, default=4,
+                    help="A/B 对接的 Vina exhaustiveness(与 ab_docking_compare 默认一致); "
+                         "改了它 Vina 分就换口径, 所以会写进 eval_meta.json 参与复用核对")
+    ap.add_argument("--timeout", type=int, default=0,
+                    help="每个子进程的秒级上限, 0=不限(默认)。超时只杀该子进程并记 TIMEOUT, "
+                         "整批继续; 注意被杀的 ab_docking_compare 遗留的 Vina 子进程不会连带被杀")
     ap.add_argument("--frontier-threshold", type=float, default=None,
                     help="frontier 判定阈值(直接控制分子大小), 默认 None = 不干预, 由子脚本"
                          "使用各自默认 0.0; 若该权重自带推荐阈值会打印口径提示")
     ap.add_argument("--keep-dir", default=os.path.join(OUTPUTS, "eval_ckpt"),
                     help="产物根目录, 默认 outputs/eval_ckpt; 每个 (靶点,种子) 一个子目录, "
-                         "已有产物直接复用")
+                         "已有产物直接复用(复用前核对 ckpt 归属 + 口径)")
     ap.add_argument("--out", default=os.path.join(OUTPUTS, "eval_ckpt_summary.csv"),
                     help="汇总 CSV, 默认 outputs/eval_ckpt_summary.csv")
     ap.add_argument("--skip-dock", action="store_true",
@@ -734,6 +1066,19 @@ def main():
         sys.stdout.reconfigure(errors="replace")
     except Exception:  # noqa: BLE001
         pass
+
+    # ---- 参数自检: 明显跑不出东西的组合直接拒绝, 别烧 GPU 才发现 ----
+    if args.num_samples <= 0 or args.beam <= 0 or args.max_steps <= 0:
+        raise SystemExit("--num-samples/--beam/--max-steps 必须 > 0")
+    if args.exhaustiveness <= 0:
+        raise SystemExit("--exhaustiveness 必须 > 0")
+    if args.parallel <= 0:
+        raise SystemExit("--parallel 必须 > 0")
+    if args.timeout < 0:
+        raise SystemExit("--timeout 不能为负(0 = 不限)")
+    if len(set(args.seeds)) != len(args.seeds):
+        log("[警告] --seeds 有重复项 %s -> 去重(否则会写出重复行)" % args.seeds)
+        args.seeds = list(dict.fromkeys(args.seeds))
 
     args.ckpt = resolve_path(args.ckpt)
     args.keep_dir = root_join(args.keep_dir)
@@ -752,15 +1097,20 @@ def main():
     log("=" * 96)
 
     if not os.path.exists(args.ckpt):
-        raise SystemExit("检查点不存在: %s" % args.ckpt)
+        raise SystemExit("检查点不存在: %s(先用 --dry-run 看路径是怎么解析的)" % args.ckpt)
     ckpt_name = os.path.basename(args.ckpt)
+    run_utc = utc_now()
+    ckpt_bytes, ckpt_mtime, ckpt_md5 = file_fingerprint(args.ckpt)
 
     # 口径提示(只读侧车表, 不做 torch.load: 评测机上 GPU 可能在训练, 不必做权重读放大)
+    threshold_src = ("显式 --frontier-threshold" if args.frontier_threshold is not None
+                     else "子脚本默认 0.0(原版行为)")
     if args.frontier_threshold is None:
         try:
             from paths import recommended_frontier_threshold as _rec
             v, src = _rec(args.ckpt, peek_ckpt=False)
             if abs(v) > 1e-9:
+                threshold_src = "默认 0.0(该权重推荐 %+.2f, 来源 %s; 本次未采用)" % (v, src)
                 log("[口径提示] %s 的推荐 frontier_threshold 是 %+.2f(来源 %s); 本次不干预, "
                     "子脚本会用默认 0.0。要对齐出货口径请显式传 --frontier-threshold %+.2f"
                     % (ckpt_name, v, src, v))
@@ -775,6 +1125,38 @@ def main():
     if not dock_on and args.frontier_threshold is not None:
         log("[提示] frontier_threshold=%s 会写进生成配置(影响分子大小); 但本轮无官方臂对照, "
             "尺寸只能与该靶点天然配体比。" % args.frontier_threshold)
+
+    # 官方权重指纹: 写进汇总 CSV, 保证"跟谁比的"可追溯
+    official_md5, official_ckpt = "", BASELINE_NAME
+    if os.path.exists(BASELINE):
+        _sz, _mt, official_md5 = file_fingerprint(BASELINE)
+    prov = {
+        "ckpt_path": rel(args.ckpt), "ckpt_bytes": ckpt_bytes, "ckpt_md5": ckpt_md5,
+        "num_samples": args.num_samples, "beam": args.beam, "max_steps": args.max_steps,
+        "frontier_threshold": (args.frontier_threshold if args.frontier_threshold is not None
+                               else 0.0),
+        "threshold_src": threshold_src, "official_ckpt": official_ckpt,
+        "official_md5": official_md5, "run_utc": run_utc, "ckpt_mtime": ckpt_mtime,
+    }
+    log("检查点指纹: %d 字节, mtime %s, md5 %s" % (ckpt_bytes, ckpt_mtime, ckpt_md5 or "NA"))
+    log("官方臂: %s md5 %s | 阈值口径: %s"
+        % (official_ckpt, official_md5 or "NA", threshold_src))
+
+    # "拿自己当基准"防呆: 路径相同 / 只是同名副本, 都会让 A/B 与 strict 基准失去意义
+    same_as_official = False
+    if os.path.exists(BASELINE):
+        try:
+            same_as_official = os.path.samefile(args.ckpt, BASELINE)
+        except Exception:  # noqa: BLE001
+            same_as_official = (os.path.normcase(os.path.abspath(args.ckpt))
+                                == os.path.normcase(os.path.abspath(BASELINE)))
+        if same_as_official:
+            log("[警告] --ckpt 与官方权重是**同一个文件** -> A/B 两臂相同, Δ 必为 0, "
+                "strict 基准就是自己, 该轮没有判据意义。")
+        elif stem(args.ckpt) == stem(BASELINE):
+            log("[警告] --ckpt 与官方权重**同名**(不是同一文件) -> A/B 臂目录会按 %s / %s_1 "
+                "区分, 但 strict 对照的官方臂目录名与本臂同名, 容易看错, 结论请注明。"
+                % (BASELINE_NAME, BASELINE_NAME))
 
     try:
         reg = json.load(open(os.path.join(CONFIGS, "targets.json"), encoding="utf-8"))
@@ -796,69 +1178,90 @@ def main():
         log("        依据: 种子间 Vina 中位噪声实测约 0.7 kcal/mol, 远大于同臂重复的 ~0.14。")
         log("-" * 96)
 
-    meta_gen = dict(num_samples=args.num_samples, beam=args.beam,
-                    max_steps=args.max_steps, frontier_threshold=args.frontier_threshold)
     names = ab_names([BASELINE, args.ckpt])
-    if names[0] == names[1]:
-        log("[警告] --ckpt 与官方权重是同一路径 -> A/B 两臂相同, Δ 必然接近 0, 该轮无判据意义。")
+    log("A/B 两臂目录名: %s(官方) / %s(本次); strict 基准一律取官方臂(official)"
+        % (names[0], names[1]))
 
     rows = []
+
+    def add_err(errs, msg):
+        """错误留痕去重: 同一条(例如 NO_META)不重复堆。"""
+        if msg and msg not in errs:
+            errs.append(msg)
+
     for target in args.targets:
         for seed in args.seeds:
             base = os.path.join(args.keep_dir, target, str(seed))
             log("[%s | 种子 %d]" % (target, seed))
             if not args.dry_run:      # dry-run 不建目录
-                ensure_dir(base)
+                try:
+                    ensure_dir(base)
+                except Exception as e:  # noqa: BLE001
+                    log("  [警告] 建目录失败(%r), 该 (靶点,种子) 大概率会失败, 继续尝试" % (e,))
 
             if target in unknown:
                 rows.append(make_row(target, seed, ckpt_name, None, None, None, None, None,
-                                     "unknown-target", multi_seed,
+                                     "unknown-target", multi_seed, prov=prov,
                                      errors=["靶点不在 configs/targets.json"]))
+                if not args.dry_run:      # 失败行也要落盘, 否则汇总行数与日志对不上
+                    write_summary(rows, args.out)
                 continue
 
+            gen_meta = gen_caliber(args, target, seed)
+            dock_meta = dock_caliber(args, target, seed) if dock_on else None
+            meta_note, meta_known = precheck_meta(base, ckpt_name, gen_meta, dock_meta,
+                                                  args.dry_run)
+            if meta_note:
+                log("  [警告] 复用核对不通过: %s" % meta_note)
+
             # ---- a) 生成级 ----
-            gen_rows, gen_rc, gen_src, gen_note = step_generate(args.ckpt, target, seed,
-                                                               args, base)
-            if gen_note:
-                log("  [提示] %s" % gen_note)
-            errors = [gen_note] if gen_note else []
+            gen_rows, gen_rc, gen_src, gen_notes = step_generate(
+                args.ckpt, target, seed, args, base, meta_note, meta_known)
+            errors = []
+            for n in gen_notes:
+                log("  [提示] %s" % n)
+                add_err(errors, n)
             if gen_rc != 0:
-                errors.append("select rc=%d" % gen_rc)
+                add_err(errors, "select rc=%d%s" % (gen_rc, "(超时)" if gen_rc == -9 else ""))
             gen = gen_rows[0] if gen_rows else None
             if gen is None and not args.dry_run:
                 log("  [失败] 生成级无产物, 记一行后继续下一个 (靶点,种子)")
                 rows.append(make_row(target, seed, ckpt_name, None, None, None, None, None,
-                                     gen_src, multi_seed, errors=errors, gen_rc=gen_rc))
+                                     gen_src, multi_seed, errors=errors, gen_rc=gen_rc,
+                                     prov=prov))
                 write_summary(rows, args.out)
                 log("-" * 96)
                 continue
-
-            note = check_meta(base, target, ckpt_name, meta_gen, gen_src, args.dry_run)
-            if note:
-                errors.append(note)
+            if meta_note:
+                add_err(errors, meta_note)
+            if same_as_official:
+                add_err(errors, "CKPT_IS_OFFICIAL(自己跟自己比, Δ 无意义)")
 
             # ---- b) 尺寸/strict ----
             art = os.path.join(base, stem(args.ckpt))
             arm_rows, arm_rc, _ = step_arm_metrics(
                 [(stem(args.ckpt), art)], None, os.path.join(base, "arm_gen_metrics.csv"),
-                os.path.join(base, "arm_gen_metrics.log"), "尺寸/strict(arm_gen_metrics)", args)
+                os.path.join(base, "arm_gen_metrics.log"), "尺寸/strict(arm_gen_metrics)", args,
+                expect_any=[stem(args.ckpt)])
             if arm_rc != 0:
-                errors.append("arm_gen_metrics rc=%d" % arm_rc)
+                add_err(errors, "arm_gen_metrics rc=%d" % arm_rc)
             arm_row = pick_arm(arm_rows, stem(args.ckpt)) or pick_arm(arm_rows, ckpt_name)
 
             # ---- c) 与官方权重的同种子成对 A/B ----
             ab_rows, ab_row, base_ab_row, base_arm_row, dock_rc = [], None, None, None, None
             if dock_on:
-                ab_rows, dock_rc, _src, dock_note = step_dock(args.ckpt, target, seed, args, base)
-                if dock_note:
-                    log("  [提示] %s" % dock_note)
-                    errors.append(dock_note)
+                ab_rows, dock_rc, _src, dock_notes = step_dock(
+                    args.ckpt, target, seed, args, base, meta_note, meta_known)
+                for n in dock_notes:
+                    log("  [提示] %s" % n)
+                    add_err(errors, n)
                 if dock_rc:
-                    errors.append("ab_docking_compare rc=%d" % dock_rc)
+                    add_err(errors, "ab_docking_compare rc=%d%s"
+                            % (dock_rc, "(超时)" if dock_rc == -9 else ""))
                 ab_row = pick_arm(ab_rows, names[1])
                 base_ab_row = pick_arm(ab_rows, names[0])
                 if base_ab_row is None and ab_rows:
-                    errors.append("A/B CSV 里找不到官方臂 %s" % names[0])
+                    add_err(errors, "A/B CSV 里找不到官方臂 %s" % names[0])
                 # 官方臂产物到手后补一次尺寸/strict 对照(纯 CPU, 不占 GPU)
                 if base_ab_row is not None or args.dry_run:
                     p_official = find_arm_parent(os.path.join(base, "ab_dock"),
@@ -867,28 +1270,45 @@ def main():
                         # dry-run: 产物目录还不存在, 用预期的路径把子命令打出来
                         p_official = os.path.join(base, "ab_dock",
                                                   "%s_s%d" % (names[0], seed), stem(BASELINE))
-                    if p_official:
+                    cal_ok, cal_note = (True, "")
+                    if p_official and not args.dry_run:
+                        # strict 基准必须是**同批次、同口径**的官方臂; cfg.yml 说了算
+                        cal_ok, cal_note = verify_arm_caliber(p_official, BASELINE, gen_meta,
+                                                              "官方臂")
+                        if cal_note:
+                            log("  [警告] %s" % cal_note)
+                            add_err(errors, cal_note)
+                    if p_official and cal_ok is not False:
                         vs_rows, vs_rc, _ = step_arm_metrics(
                             [("official", p_official), (stem(args.ckpt), art)], "official",
                             os.path.join(base, "arm_gen_metrics_vs_official.csv"),
                             os.path.join(base, "arm_gen_metrics.log"),
-                            "对照官方臂(arm_gen_metrics)", args)
+                            "对照官方臂(arm_gen_metrics)", args, expect_any=["official"])
                         if vs_rc != 0:
-                            errors.append("arm_gen_metrics(vs官方) rc=%d" % vs_rc)
+                            add_err(errors, "arm_gen_metrics(vs官方) rc=%d" % vs_rc)
                         base_arm_row = pick_arm(vs_rows, "official")
                         if arm_row is None:
                             arm_row = pick_arm(vs_rows, stem(args.ckpt))
+                        if base_arm_row is None:
+                            add_err(errors, "官方臂无可用尺寸/strict 行(缺 SMILES.txt?)")
                     else:
-                        log("  [提示] 找不到官方臂的采样产物目录 -> 本轮无尺寸/strict 对照")
-                        errors.append("未找到官方臂产物目录")
+                        log("  [提示] 官方臂产物口径不可用 -> 本轮无尺寸/strict 对照, "
+                            "只做绝对下限判定")
+                        add_err(errors, "无同口径官方臂 -> 无 strict/尺寸对照")
 
             ref_ha = (reg.get(target) or {}).get("n_ligand_heavy")
             row = make_row(target, seed, ckpt_name, gen, arm_row, base_arm_row, ab_row,
                            base_ab_row, gen_src, multi_seed, errors=errors,
-                           gen_rc=gen_rc, arm_rc=arm_rc, dock_rc=dock_rc, ref_ha=ref_ha)
+                           gen_rc=gen_rc, arm_rc=arm_rc, dock_rc=dock_rc, ref_ha=ref_ha,
+                           prov=prov)
             rows.append(row)
             if not args.dry_run:
                 write_summary(rows, args.out)
+                record_meta(base, target, ckpt_name, gen_meta, dock_meta, gen_src, meta_note,
+                            {"dock_n_smiles": row["dock_n_smiles"],
+                             "dock_n_docked": row["dock_n_docked"],
+                             "parallel": args.parallel, "timeout": args.timeout,
+                             "summary_out": rel(args.out), "checkpoint_md5": ckpt_md5})
             log("        完成 %s | QED %s | SA %s | 骨架 %s | 穿模 %s | MW %s | 重原子 %s | "
                 "strict %s | Vina %s (Δ官方 %s) | LE %s | 退化 %s%s"
                 % (row["n_finished"], row["qed_med"], row["sa_med"], row["n_scaffold"],
