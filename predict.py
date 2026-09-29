@@ -42,14 +42,23 @@ from paths import (ROOT, CONFIGS, DATA, KNOWN_DRUGS, OUTPUTS, PRETRAINED,  # noq
                    DEFAULT_CKPT, RESULTS, ensure_dir, missing_hint)
 
 MODEL_NAME = "7-eonmol (Pocket2Mol 等变图神经网络 + 口袋引导束搜索, GPCR 微调版)"
-# 措辞纪律(会写进 results.csv 对外交付): v3 = 解冻编码器 + 扩容 frontier_pred。
-# 在**出货目标**(diversity_w=0.5)下、A2A、同种子成对、双种子:
-#   结合强度与官方基线**打平**(Vina 中位差 -0.04/-0.03, 小于噪声 ~0.14),
-#   QED/SA 两个种子都更好, 骨架数打平或更多, 穿模率均为 0%。
-# **不得**写成"结合强度更强" —— 只是不劣。
-MODEL_VERSION = ("7-eonmol_ft_gpcr_v3.pt — 本项目自训; 出货目标下与官方权重的结合强度"
-                 "打平(A2A 双种子), 类药性 QED/SA 与骨架多样性更优; "
-                 "基线为 ICML 2022 官方权重")
+# 措辞纪律(会写进 results.csv 对外交付): **不得**写成"结合强度更强" —— 只是不劣/打平。
+# 版本标签**随实际默认权重自动派生**(2026-09-29 起): 此前这里硬编码 v3, v10 晋级后即失效,
+# 故改为按 DEFAULT_CKPT 的文件名取描述, 避免"换了权重但标签没换"的漂移。
+_MODEL_DESC = {
+    "7-eonmol_ft_gpcr_v10.pt":
+        "本项目自训(官方权重起点 + gpcr_mass_v1 微调); 同种子成对十臂 vs 官方: "
+        "原始对接分 4 更好/4 打平/2 更差(均值 -0.15, 非全面超越), "
+        "生成尺寸与官方一致(MW 390-410)",
+    "7-eonmol_ft_gpcr_v3.pt":
+        "本项目自训(解冻编码器 + 扩容 frontier_pred); A2A 上原始对接分与官方打平(双种子), "
+        "类药性 QED/SA 与骨架多样性更优, 但分子偏小(配体效率 LE 更好)",
+    "pretrained_Pocket2Mol.pt": "ICML 2022 官方预训练权重(基线)",
+}
+_CKPT_BASENAME = os.path.basename(DEFAULT_CKPT)
+MODEL_VERSION = "%s — %s" % (
+    _CKPT_BASENAME,
+    _MODEL_DESC.get(_CKPT_BASENAME, "本项目自训权重(无预置描述, 见 ModelCard.md)"))
 CODE_VERSION = "7-eonmol-competition-submission"
 
 # 靶点 -> 已知活性分子参考集(用于新颖性评估); 缺失则该项留空

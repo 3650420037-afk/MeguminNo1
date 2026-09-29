@@ -114,15 +114,16 @@ def main():
     ap.add_argument("--config", default=DEFAULT_TEMPLATE, help="采样配置模板")
     ap.add_argument("--ckpt", default=None,
                     help="自定义模型权重路径; 默认用本项目自训的 "
-                         "models/7-eonmol_ft_gpcr_v3.pt(解冻编码器 + 扩容终止模块; "
-                         "在出货目标下与官方权重的结合强度打平, 且 QED/SA/骨架多样性更好。"
-                         "见 ModelCard.md)。想跑官方基线请显式传 "
-                         "models/pretrained_Pocket2Mol.pt; 想复现旧结论可传 "
-                         "models/7-eonmol_ft_gpcr_v2.pt")
+                         "models/7-eonmol_ft_gpcr_v10.pt(官方权重起点 + gpcr_mass_v1 微调; "
+                         "同种子成对十臂 vs 官方: 原始对接分 4 更好/4 打平/2 更差、均值 -0.15, "
+                         "生成尺寸与官方一致。见 ModelCard.md / models/README.md)。"
+                         "想要配体效率/QED 为先的备选可传 models/7-eonmol_ft_gpcr_v3.pt; "
+                         "想跑官方基线请显式传 models/pretrained_Pocket2Mol.pt; "
+                         "想复现旧结论可传 models/7-eonmol_ft_gpcr_v2.pt")
     ap.add_argument("--frontier-threshold", type=float, default=None,
                     help="生长前沿判定阈值(决定何时停止, 直接控制分子大小)。"
                          "不传=用**该权重自己的推荐值**(见 models/threshold_recommendations.json; "
-                         "v3 推荐 -0.5、官方/v10 推荐 0.0); 传 0.0 可强制回原版行为")
+                         "v10/官方 推荐 0.0、v3 推荐 -0.5); 传 0.0 可强制回原版行为")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()

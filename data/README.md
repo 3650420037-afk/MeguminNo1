@@ -166,3 +166,18 @@ python src/scripts/diagnose_dataset.py --data data/gpcr_multitarget_v2 --mask-sa
 此外，`data/` 根目录残留的 `gpcr_v3_clean_*`、`gpcr_v3_merged_*` 文件属于
 **已回退的数据扩充实验**（该实验的微调未通过 A/B 对照，已整体回退，
 详见 `docs/7-eonmol_技术全书.md`），保留仅为可追溯，不参与当前训练与评测。
+
+---
+
+## 八、未纳入版本控制的原始下载（2026-09-29 注）
+
+`data/ligand_data/chembl_*_raw.json` 共 **8 个文件（合计约 110 MB）**，是 M6 多口袋
+扩展时从 ChEMBL API 拉取**未经处理的原始响应**（5HT1A / 5HT2A / A1 / D2 / H1 / M1 /
+OPRK1 / OPRM1）。它们**未纳入 git**（体积大且可重放），需要的环境用以下脚本重建：
+
+```bash
+python src/scripts/fetch_m6_targets.py     # 按 UniProt/ChEMBL ID 重新拉取
+```
+
+**这 8 个文件缺失不影响已入库数据**：由它们派生的活性配体表与口袋数据
+（`data/gpcr_multi_v1/` 等）已提交，训练/评测可离线复现。

@@ -38,8 +38,14 @@
 多靶点微调实验（479 对数据集）已如实记录为**未晋级**；而后续在对接构建的高密度数据集上
 微调得到的 `models/7-eonmol_ft_gpcr_v2.pt` 最初判为晋级，但该结论已在 2026-09-27 被推翻
 （原 A/B 用的 `diversity_w = 0` 并非出货目标；在出货目标 `0.5` 下复验，QED 两个种子都更低）。
-详见 `ModelCard.md` 与 `docs/任务状态与记忆.md`。官方预训练权重
-（`models/pretrained_Pocket2Mol.pt`）始终保留为基线与回退。
+详见 `ModelCard.md` 与 `docs/任务状态与记忆.md`。
+
+**当前默认权重（2026-09-29 起）= `models/7-eonmol_ft_gpcr_v10.pt`**
+（官方权重起点 + 自建 `gpcr_mass_v1` 12,244 对微调；十臂同种子成对 vs 官方：原始对接分
+4 更好 / 4 打平 / 2 更差、均值 −0.15，生成尺寸与官方一致。**如实限定**：按项目预登记判据
+v10 本判 NOT_PROMOTED，本次替换默认权重是用户显式决策，**不构成"全面达标/全面优于官方"**）。
+`models/7-eonmol_ft_gpcr_v3.pt` 转为**配体效率/QED 为先的备选**（推荐阈值 −0.5）。
+官方预训练权重（`models/pretrained_Pocket2Mol.pt`）始终保留为基线与回退。
 
 ---
 

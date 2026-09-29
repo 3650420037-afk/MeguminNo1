@@ -92,7 +92,7 @@ script_ver/run_utc。
 ----
     # 全量: 4 靶点 x 2 种子, 生成 + 与官方权重的成对对接
     python src/scripts/eval_checkpoint_targets.py \\
-        --ckpt models/7-eonmol_ft_gpcr_v3.pt \\
+        --ckpt models/7-eonmol_ft_gpcr_v10.pt \\
         --targets A2A B2AR D3 5HT2B --num-samples 50 --beam 50 --max-steps 40 \\
         --seeds 2024 2025 --parallel 6
 

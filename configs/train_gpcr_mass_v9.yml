@@ -13,7 +13,8 @@
 #
 # 起点与架构
 # ----------
-# init_checkpoint = models/7-eonmol_ft_gpcr_v3.pt(当前的交付/默认权重 = v8 的 iter 800)。
+# init_checkpoint = models/7-eonmol_ft_gpcr_v3.pt(当时的交付/默认权重 = v8 的 iter 800)。
+# 2026-09-29 注：默认权重已改为 models/7-eonmol_ft_gpcr_v10.pt；本行是历史记录。
 # 架构与 v3 完全相同(解冻 encoder + 分层 LR + frontier 256/64/2), 因此**不需要**
 # init_strict=false —— 形状完全匹配, 走严格的 load_state_dict。这比从官方权重
 # 重新扩容要干净: 不引入任何随机初始化的模块。

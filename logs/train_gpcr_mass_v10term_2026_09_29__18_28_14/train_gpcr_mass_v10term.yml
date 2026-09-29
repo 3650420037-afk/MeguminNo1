@@ -1,0 +1,102 @@
+# v10-term = v10 配方 + **训练侧终止修复**（M8 处方②），2026-09-29 18:25
+# ---------------------------------------------------------------------------
+# 与 v10 的差别（仅这两处，其余完全一致：官方起点 + gpcr_mass_v1 四口袋 + 同超参/种子）：
+#   ① **密集存点**：val_freq 500 -> **250**（配合"按多种子尺寸稳定性选点"的处方①，
+#      因为 §5.33 实测凹坑寿命 ≲500–1000 步，500 步栅格会整点落在坑里）；
+#      同时 early_stop_patience 6 -> **12**，保持"连续 3000 步无改善才停"的语义不变。
+#   ② **frontier 正样本加权** `frontier_pos_weight: 2.0`：把"应继续生长"的正类损失放大，
+#      直接抑制"停早"模式（§5.39：纯采样侧阈值对部分种子无效甚至反向 → 必须训练侧介入）。
+#      `maskfill.py` 里 1.0 时不构造 pos_weight，与官方实现逐位一致 → 该改动可一键回退（删键即可）。
+# 数据说明：**仍用 4 口袋的 gpcr_mass_v1**，不用 11 口袋——因为 v11（预算不足）与 v11b（预算修正后）
+#   都已实测失败（§5.31/§5.34），扩口袋不是杠杆；本次单变量只查"终止监督"。
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+  # 与 v3 完全一致(故可直接严格加载 v3 权重, 无随机初始化模块)
+  frontier_pos_weight: 2.0   # M8 处方②：抑制过早停止（1.0=与官方逐位一致）
+  frontier:
+    hidden_sca: 128
+    hidden_vec: 32
+    layers: 1
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/pretrained_Pocket2Mol.pt
+  # 架构与 v3 相同 -> 形状全匹配 -> 保持严格加载(无需 init_strict: false)
+
+  batch_size: 1
+  grad_accum: 8                 # 有效 batch = 8
+  num_workers: 0
+  pin_memory: false
+
+  # --- 针对 ~15,000 样本重算的预算(见文件头说明) ---
+  max_iters: 12000
+  val_freq: 250
+  early_stop_patience: 12        # 6 x 500 = 3000 步未改善即停
+  early_stop_min_iters: 2000
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  freeze_encoder: false
+  optimizer:
+    type: adam
+    lr: 1.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+    param_groups:
+      - {pattern: frontier_pred, lr: 5.e-4}
+      - {pattern: encoder,       lr: 1.e-5}
+
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      min_num_unmasked: 1      # 必须 >=1, 否则全掩码 -> context 为空 -> NaN
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+dataset:
+  name: pl
+  path: ./data/gpcr_mass_v1
+  split: ./data/gpcr_mass_v1/split_by_name.pt

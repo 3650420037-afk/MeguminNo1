@@ -1,0 +1,97 @@
+# v10 = 从【官方预训练权重】直接在 gpcr_mass_v1（12,244 对）上微调
+# ---------------------------------------------------------------------------
+# 与 v9 的唯一差别：起点从 v3（v7/v8 谱系，尺寸偏小）改为官方权重，
+# frontier 容量相应回到官方默认 128/32/1（否则形状不符会被 init_strict=false 剔除重建）。
+# 目的：检验"自训模型分子偏小/原始对接分偏低"是否**继承自 v3 谱系**，
+# 而不是数据或配方问题。数据、迭代数、早停、分层 LR、种子(2022) 全部与 v9 相同，
+# 因此 v9 vs v10 构成"起点"的单变量对照。
+model:
+  vn: vn
+  hidden_channels: 256
+  hidden_channels_vec: 64
+  encoder:
+    name: cftfm
+    hidden_channels: 256
+    hidden_channels_vec: 64
+    edge_channels: 64
+    key_channels: 128
+    num_heads: 4
+    num_interactions: 6
+    cutoff: 10.0
+    knn: 48
+  field:
+    name: classifier
+    num_filters: 128
+    num_filters_vec: 32
+    edge_channels: 64
+    num_heads: 4
+    cutoff: 10.0
+    knn: 32
+  position:
+    num_filters: 128
+    n_component: 3
+  # 与 v3 完全一致(故可直接严格加载 v3 权重, 无随机初始化模块)
+  frontier:
+    hidden_sca: 128
+    hidden_vec: 32
+    layers: 1
+
+train:
+  seed: 2022
+  use_apex: false
+  init_checkpoint: models/pretrained_Pocket2Mol.pt
+  # 架构与 v3 相同 -> 形状全匹配 -> 保持严格加载(无需 init_strict: false)
+
+  batch_size: 1
+  grad_accum: 8                 # 有效 batch = 8
+  num_workers: 0
+  pin_memory: false
+
+  # --- 针对 ~15,000 样本重算的预算(见文件头说明) ---
+  max_iters: 12000
+  val_freq: 500
+  early_stop_patience: 6        # 6 x 500 = 3000 步未改善即停
+  early_stop_min_iters: 2000
+
+  pos_noise_std: 0.1
+  max_grad_norm: 100.0
+
+  freeze_encoder: false
+  optimizer:
+    type: adam
+    lr: 1.e-4
+    weight_decay: 0
+    beta1: 0.99
+    beta2: 0.999
+    param_groups:
+      - {pattern: frontier_pred, lr: 5.e-4}
+      - {pattern: encoder,       lr: 1.e-5}
+
+  scheduler:
+    type: plateau
+    factor: 0.6
+    patience: 3
+    min_lr: 1.e-6
+
+  transform:
+    mask:
+      type: mixed
+      min_ratio: 0.0
+      max_ratio: 1.1
+      min_num_masked: 1
+      min_num_unmasked: 1      # 必须 >=1, 否则全掩码 -> context 为空 -> NaN
+      p_random: 0.15
+      p_bfs: 0.6
+      p_invbfs: 0.25
+    contrastive:
+      num_real: 20
+      num_fake: 20
+      pos_real_std: 0.05
+      pos_fake_std: 2.0
+    edgesampler:
+      k: 8
+
+dataset:
+  name: pl
+  path: ./data/gpcr_mass_v1
+  split: ./data/gpcr_mass_v1/split_by_name.pt

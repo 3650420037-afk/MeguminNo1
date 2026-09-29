@@ -35,6 +35,15 @@ class MaskFillModelVN(Module):
                                             hidden_dim_sca=int(_fr.get('hidden_sca', 128)),
                                             hidden_dim_vec=int(_fr.get('hidden_vec', 32)),
                                             n_layers=int(_fr.get('layers', 1)))
+        # M8 处方②：终止行为显式监督的**正样本加权**（默认 1.0 = 与官方/现状**逐位一致**）。
+        # 动机（实测 §5.33/§5.39）：模型会掉进"停早"模式（MW 231–330 vs 数据先验 398），
+        # 而 frontier 头正是"还能不能长"的总开关；把"应继续生长"的正类权重调高，
+        # 等价于在训练侧抑制过早停止。1.0 时不构造 pos_weight，行为与官方实现完全相同；
+        # 回退只需把配置里的键删掉或设为 1.0（不改代码）。
+        try:
+            self.frontier_pos_weight = float(config.get('frontier_pos_weight', 1.0))
+        except Exception:
+            self.frontier_pos_weight = 1.0
         # self.protein_frontier_pred = FrontierLayerVN(in_sca=in_sca, in_vec=in_vec,
         #                                                                     hidden_dim_sca=128, hidden_dim_vec=32)
         self.pos_predictor = PositionPredictor(in_sca=in_sca, in_vec=in_vec,
@@ -382,7 +391,12 @@ class MaskFillModelVN(Module):
         ).clamp_max(10.)
         loss_frontier = F.binary_cross_entropy_with_logits(
             input = y_frontier_pred,
-            target = y_frontier.view(-1, 1).float()
+            target = y_frontier.view(-1, 1).float(),
+            # 1.0 → None，**与官方实现逐位一致**；>1 → 对"应继续生长"的正类加权（M8 处方②）
+            pos_weight = (None if abs(getattr(self, 'frontier_pos_weight', 1.0) - 1.0) < 1e-9
+                          else torch.tensor([self.frontier_pos_weight],
+                                            device=y_frontier_pred.device,
+                                            dtype=y_frontier_pred.dtype))
         ).clamp_max(10.)
         loss_pos = -torch.log(
             self.pos_predictor.get_mdn_probability(abs_pos_mu, pos_sigma, pos_pi, pos_generate) + 1e-16

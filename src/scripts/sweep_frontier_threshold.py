@@ -29,7 +29,8 @@
 
 用法
 ----
-    python src/scripts/sweep_frontier_threshold.py --ckpt models/7-eonmol_ft_gpcr_v3.pt \
+    # --ckpt 不传 = 跟随当前默认权重(src/paths.py: DEFAULT_CKPT; 2026-09-29 起为 v10)
+    python src/scripts/sweep_frontier_threshold.py --ckpt models/7-eonmol_ft_gpcr_v10.pt \
         --target A2A --thresholds 0.5 0.3 0.2 0.1 --num-samples 60 --seed 2024
 """
 import argparse
@@ -42,7 +43,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from paths import ROOT, CONFIGS, PYTHON  # noqa: E402
+from paths import ROOT, CONFIGS, PYTHON, DEFAULT_CKPT  # noqa: E402
 
 TEMPLATE = os.path.join(CONFIGS, "sample_for_pdb_guided_l3.yml")
 SAMPLER = os.path.join(ROOT, "src", "sample_for_pdb.py")
@@ -84,7 +85,8 @@ def metrics(smis):
 
 def main():
     ap = argparse.ArgumentParser(description="frontier 阈值扫描")
-    ap.add_argument("--ckpt", default=os.path.join(ROOT, "models", "7-eonmol_ft_gpcr_v3.pt"))
+    # 默认跟随"当前默认权重"(src/paths.py)，避免硬编码旧权重导致口径漂移
+    ap.add_argument("--ckpt", default=DEFAULT_CKPT)
     ap.add_argument("--target", default="A2A")
     ap.add_argument("--thresholds", nargs="+", type=float, default=[0.5, 0.3, 0.2, 0.1])
     ap.add_argument("--num-samples", type=int, default=60)
