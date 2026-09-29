@@ -144,6 +144,37 @@ def test_no_match_raises():
     raise AssertionError("应当报错")
 
 
+class Shared(nn.Module):
+    """故意让同一个 Linear 实例被两处引用（权重共享）—— 护栏必须拒绝而不是静默漏合并。"""
+
+    def __init__(self):
+        super().__init__()
+        lin = nn.Linear(8, 8)
+        self.encoder = nn.Sequential(lin)
+        self.alias = lin          # 同一实例
+
+    def forward(self, x):
+        return self.alias(self.encoder(x))
+
+
+def test_shared_weight_is_rejected():
+    m = Shared()
+    try:
+        apply_lora(m, targets=('encoder', 'alias'), rank=2, alpha=4.0, verbose=False)
+    except NotImplementedError as e:
+        print("PASS ⑦ 权重共享被显式拒绝（避免静默漏合并）：%s" % str(e)[:52])
+        return
+    raise AssertionError("共享权重应当报错")
+
+
+def test_merge_trainable_option():
+    m = Toy()
+    apply_lora(m, targets=('encoder',), rank=2, alpha=4.0, verbose=False)
+    merge_lora(m, trainable=True)
+    assert all(p.requires_grad for p in m.encoder.parameters()), "trainable=True 时基座应可训练"
+    print("PASS ⑧ merge_lora(trainable=True) 后基座参数可训练（供合并后继续微调）")
+
+
 if __name__ == "__main__":
     test_init_is_bit_identical()
     test_base_frozen_adapters_trainable()
@@ -151,4 +182,6 @@ if __name__ == "__main__":
     test_adapter_state_dict_roundtrip()
     test_targets_restrict_injection()
     test_no_match_raises()
-    print("ALL PASS (6/6)")
+    test_shared_weight_is_rejected()
+    test_merge_trainable_option()
+    print("ALL PASS (8/8)")

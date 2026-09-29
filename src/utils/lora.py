@@ -83,10 +83,27 @@ def _set_submodule(model, qualname, new_mod):
 
 
 def apply_lora(model, targets=('encoder',), rank=8, alpha=16.0, verbose=True):
-    """按模块名前缀注入 LoRA。返回被替换的层数。**基座冻结、只有适配器可训练。**"""
+    """按模块名前缀注入 LoRA。返回被替换的层数。**基座冻结、只有适配器可训练。**
+
+    ⚠ 若同一个 `nn.Linear` **实例**被多处引用（权重共享），本函数会**显式报错**：
+    `merge_lora` 用的是去掉重复引用的 `named_modules()`，共享实例只会被折入一次，
+    另一处引用仍指向旧包装器 → 会得到"看起来合并了、其实不一致"的模型。
+    本仓库实测 `MaskFillModelVN` 无共享 Linear（262 实例 / 262 引用），但宁可失败也不要静默出错。
+    """
     hits = _qualified_names(model, targets)
     if not hits:
         raise ValueError('没有匹配到任何 nn.Linear（targets=%s）—— 请检查前缀' % (targets,))
+    seen_shared = {}
+    for name, mod in model.named_modules(remove_duplicate=False):
+        if isinstance(mod, nn.Linear):
+            seen_shared.setdefault(id(mod), []).append(name)
+    shared = {k: v for k, v in seen_shared.items() if len(v) > 1}
+    hit_names = {n for n, _ in hits}
+    bad = {k: v for k, v in shared.items() if any(n in hit_names for n in v)}
+    if bad:
+        raise NotImplementedError(
+            '检测到权重共享的 nn.Linear，apply_lora/merge_lora 不支持该情形（会静默漏合并）: %s'
+            % list(bad.values())[:2])
     for name, mod in hits:
         _set_submodule(model, name, LoRALinear(mod, rank=rank, alpha=alpha))
     # 冻结所有非 LoRA 参数（含头部）；若要"适配器 + 头部"一起训，请随后自行解冻头部
@@ -130,12 +147,19 @@ def load_lora_state_dict(model, sd):
 
 
 @torch.no_grad()
-def merge_lora(model):
-    """把 LoRA 折进基座并**还原为普通 nn.Linear**（导出的权重不再依赖本模块）。返回折入层数。"""
+def merge_lora(model, trainable=False):
+    """把 LoRA 折进基座并**还原为普通 nn.Linear**（导出的权重不再依赖本模块）。返回折入层数。
+
+    trainable=False（默认）：折入后基座参数保持 `requires_grad=False`（导出/采样用，无需梯度）。
+    trainable=True：折入后把基座参数设为可训练（用于"合并后继续全量微调"的场景）。
+    """
     hits = [(n, m) for n, m in model.named_modules() if isinstance(m, LoRALinear)]
     for name, mod in hits:
         base = mod.base
         base.weight.copy_(mod.merged_weight())
+        if trainable:
+            for p in base.parameters():
+                p.requires_grad_(True)
         _set_submodule(model, name, base)
     return len(hits)
 
