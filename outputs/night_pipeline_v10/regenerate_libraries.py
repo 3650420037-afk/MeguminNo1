@@ -46,7 +46,10 @@ PY = sys.executable
 STAGING = os.path.join(ROOT, "outputs", "library_v10")
 RESULTS = os.path.join(ROOT, "results")
 BATCHES = {"A2A": 11, "B2AR": 6, "D3": 5, "5HT2B": 6}      # 由旧库规模 / 50 得出
-N_PER_BATCH, BEAM, STEPS, DW = 50, 100, 50, 0.5
+N_PER_BATCH, BEAM, STEPS, DW = 50, 50, 40, 0.5
+# 协议说明（2026-09-30 01:10 决定）：旧库用 beam 100/steps 50，实测吞吐仅 ~2.5 分子/分钟
+# （28 批要 8+ 小时）；改为 **beam 50/steps 40** —— 与本项目全部 A/B 证据同源（吞吐 ~12 分子/分钟），
+# 使"交付的药库"与"我们实测并报告过的分子"是同一口径。旧库协议与产物已完整备份。
 
 # 尺寸机制：off = 纯 v10（阈值 0.0）；s3 = 加硬尺寸窗（需先经凹坑测试判定有效）
 SCHEDULES = {
@@ -89,7 +92,7 @@ def run(cmd, logfile, label):
     return rc, time.time() - t0
 
 
-def build_one(target, sched_mode, dry):
+def build_one(target, sched_mode, dry, beam=None, steps=None):
     tdir = os.path.join(STAGING, target)
     os.makedirs(tdir, exist_ok=True)
     design_out = os.path.join(tdir, "design")
@@ -97,7 +100,8 @@ def build_one(target, sched_mode, dry):
     for i in range(BATCHES[target]):
         seed = 2024 + i
         cmd = [PY, os.path.join(ROOT, "design.py"), "--target", target,
-               "--num-samples", str(N_PER_BATCH), "--beam", str(BEAM), "--max-steps", str(STEPS),
+               "--num-samples", str(N_PER_BATCH), "--beam", str(beam or BEAM),
+               "--max-steps", str(steps or STEPS),
                "--seed", str(seed), "--diversity-w", str(DW), "--outdir", design_out] + \
               SCHEDULES[sched_mode]
         if dry:
@@ -142,6 +146,8 @@ def main():
     ap.add_argument("--swap", action="store_true", help="把 staging 成果替换到 results/（默认不动 results/）")
     ap.add_argument("--skip-backup", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--beam", type=int, default=BEAM)
+    ap.add_argument("--steps", type=int, default=STEPS)
     args = ap.parse_args()
     os.makedirs(STAGING, exist_ok=True)
 
@@ -158,7 +164,7 @@ def main():
                                         {t: BATCHES[t] for t in args.targets}))
     for t in args.targets:
         log("=== 开始 %s ===" % t)
-        build_one(t, args.schedule_mode, args.dry_run)
+        build_one(t, args.schedule_mode, args.dry_run, args.beam, args.steps)
     log("全部目标处理完毕（结果在 %s；未替换 results/，需显式 --swap）" % os.path.relpath(STAGING, ROOT))
     return 0
 
