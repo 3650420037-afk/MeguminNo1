@@ -180,6 +180,30 @@ if __name__ == '__main__':
                     names.add(pname.split('.')[0] + '.' + (pname.split('.')[1] if '.' in pname else ''))
             logger.info('Frozen by patterns %s: %.2f M params (%s)'
                         % (freeze_pats, n_frozen / 1e6, sorted(names)))
+
+        # ---- LoRA / Adapter（用户路线③；**默认关闭**，不开时行为与原来完全一致）----
+        # 动机：全量微调会把官方权重的"尺寸/终止先验"一起改掉（§5.33 的尺寸漂移即发生在全量微调里）；
+        # LoRA 只训低秩增量、基座冻结，理论上更能保住先验，且可训练参数少 1–2 个数量级（8 GB 友好）。
+        # 配置写法：
+        #   model:
+        #     lora: {enabled: true, rank: 8, alpha: 16.0, targets: [encoder], unfreeze: [frontier_pred]}
+        # 说明：注入在**加载 init_checkpoint 之后**（否则键名对不上），且 B 零初始化 → 注入瞬间
+        # 前向输出与基座一致（有单测/集成测试保证，见 tests/test_lora*.py）。
+        lora_cfg = config.model.get('lora', None) or {}
+        if lora_cfg.get('enabled', False):
+            from utils.lora import apply_lora, count_trainable, unfreeze_patterns
+            n_lora = apply_lora(model,
+                                targets=tuple(lora_cfg.get('targets', ['encoder'])),
+                                rank=int(lora_cfg.get('rank', 8)),
+                                alpha=float(lora_cfg.get('alpha', 16.0)))
+            extra = list(lora_cfg.get('unfreeze', []) or [])
+            if extra:
+                got = unfreeze_patterns(model, extra)
+                logger.info('LoRA: 额外解冻 patterns=%s (%.3f M 参数)' % (extra, got / 1e6))
+            tr, tot = count_trainable(model)
+            logger.info('LoRA: 注入 %d 层, rank=%d alpha=%.1f, 可训练 %.3f M / %.3f M (%.2f%%)'
+                        % (n_lora, int(lora_cfg.get('rank', 8)), float(lora_cfg.get('alpha', 16.0)),
+                           tr / 1e6, tot / 1e6, 100.0 * tr / tot))
     print('Num of parameters is', np.sum([p.numel() for p in model.parameters()]))
 
     # Optimizer and scheduler
