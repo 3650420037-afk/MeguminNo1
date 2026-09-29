@@ -182,6 +182,21 @@ if __name__ == '__main__':
         ligand_atom_feature_dim = ligand_featurizer.feature_dim,
         num_bond_types = 3,
     ).to(args.device)
+    # LoRA 检查点支持（用户路线③，2026-09-29）：若该检查点是用 model.lora 训练的，
+    # 权重里会多出 lora_A/lora_B 键 —— 必须先按**同一配置**注入 LoRA，键名才对得上。
+    # 注意 LoRA 训练里 `maskfill` 的前向是 base + ΔW，采样必须复现同样的结构，否则会静默丢适配器。
+    # 推荐做法仍是先 `src/scripts/merge_lora_checkpoint.py` 把适配器折进基座再出货（导出不依赖 LoRA 代码）。
+    _cfg = ckpt.get('config', {}) if isinstance(ckpt, dict) else {}
+    _mcfg = _cfg.get('model', {}) if isinstance(_cfg, dict) else getattr(_cfg, 'model', {})
+    _lora = ((_mcfg.get('lora', None) if isinstance(_mcfg, dict)
+              else getattr(_mcfg, 'lora', None)) or {})
+    if _lora.get('enabled', False):
+        from utils.lora import apply_lora
+        n_lora = apply_lora(model, targets=tuple(_lora.get('targets', ['encoder'])),
+                            rank=int(_lora.get('rank', 8)), alpha=float(_lora.get('alpha', 16.0)),
+                            verbose=False)
+        logger.info('该检查点启用了 LoRA：已按配置注入 %d 层（rank=%d）后加载权重'
+                    % (n_lora, int(_lora.get('rank', 8))))
     model.load_state_dict(ckpt['model'])
 
     # Sampling
