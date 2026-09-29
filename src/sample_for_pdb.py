@@ -38,10 +38,17 @@ def size_schedule_threshold(base_thr, n_ha, step_i, max_steps, sched):
       relax       偏小时下调的幅度（阈值↓ = 更容易判为 frontier = 继续长）
       tighten     偏大时上调的幅度（默认 0 = 不干预偏大者）
       warmup_frac 前若干比例步数不干预（让模型自行起步）
+      floor_steps 若 >0：**前 floor_steps 步一律用 floor_thr** —— 因为实测"每步恰好 1 个重原子"，
+                  这等价于一条**硬尺寸下限**（分子至少长到 floor_steps 个重原子），
+                  方向**由构造保证**（不像阈值微调那样可能反向，见 §5.39/§5.48）。
+      floor_thr   下限期使用的阈值（如 −2.0 = 几乎总能找到 frontier，强制继续长）
 
-    返回 (阈值, 动作)，动作用于统计/留痕：'off'/'warmup'/'relax'/'tighten'/'keep'。
+    返回 (阈值, 动作)，动作用于统计/留痕：'off'/'warmup'/'floor'/'relax'/'tighten'/'keep'。
     """
     sched = sched or {}
+    floor_steps = float(sched.get('floor_steps', 0) or 0)
+    if floor_steps > 0 and step_i < floor_steps:
+        return float(sched.get('floor_thr', -2.0)), 'floor'
     target = float(sched.get('target_ha', 0) or 0)
     if target <= 0:
         return base_thr, 'off'
@@ -209,18 +216,21 @@ if __name__ == '__main__':
     # 元素表只有 C/N/O/S/Se（重原子），故 ligand_context_element.numel() 即重原子数。
     _sched = config.sample.threshold.get('frontier_threshold_schedule', None) or {}
     _sch_target = float(_sched.get('target_ha', 0) or 0)
+    _sch_floor = float(_sched.get('floor_steps', 0) or 0)
     _sch_slack = float(_sched.get('slack', 4.0))
     _sch_relax = float(_sched.get('relax', 0.35))
     _sch_tighten = float(_sched.get('tighten', 0.0))
     _sch_warmup = float(_sched.get('warmup_frac', 0.25))
-    _sch_stats = {'relaxed': 0, 'tightened': 0, 'kept': 0}
-    if _sch_target > 0:
-        logger.info('尺寸调度开启: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f'
-                    % (_sch_target, _sch_slack, _sch_relax, _sch_tighten, _sch_warmup))
+    _sch_stats = {'relaxed': 0, 'tightened': 0, 'kept': 0, 'floored': 0}
+    if _sch_target > 0 or _sch_floor > 0:
+        logger.info('尺寸调度开启: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f '
+                    '| floor_steps=%.0f floor_thr=%.2f'
+                    % (_sch_target, _sch_slack, _sch_relax, _sch_tighten, _sch_warmup,
+                       _sch_floor, float(_sched.get('floor_thr', -2.0))))
 
     def _thr_for(data_i, step_i):
         """返回该分子本步应使用的 frontier 阈值（调度关闭时恒为 _frontier_thr）。"""
-        if _sch_target <= 0:
+        if _sch_target <= 0 and _sch_floor <= 0:
             return _frontier_thr
         try:
             n_ha = int(data_i.ligand_context_element.numel())
@@ -228,7 +238,8 @@ if __name__ == '__main__':
             return _frontier_thr
         thr_i, action = size_schedule_threshold(
             _frontier_thr, n_ha, step_i, config.sample.max_steps, _sched)
-        _sch_stats[{'relax': 'relaxed', 'tighten': 'tightened'}.get(action, 'kept')] += 1
+        _sch_stats[{'relax': 'relaxed', 'tighten': 'tightened',
+                    'floor': 'floored'}.get(action, 'kept')] += 1
         return thr_i
 
     init_data_list = get_init(data.to(args.device),   # sample the initial atoms
@@ -343,10 +354,11 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info('Terminated. Generated molecules will be saved.')
 
-    if _sch_target > 0:
-        logger.info('尺寸调度统计: 下调 %d 次 | 上调 %d 次 | 保持 %d 次 (target_ha=%.1f relax=%.2f)'
-                    % (_sch_stats['relaxed'], _sch_stats['tightened'], _sch_stats['kept'],
-                       _sch_target, _sch_relax))
+    if _sch_target > 0 or _sch_floor > 0:
+        logger.info('尺寸调度统计: 下限期 %d 次 | 下调 %d 次 | 上调 %d 次 | 保持 %d 次 '
+                    '(target_ha=%.1f relax=%.2f floor_steps=%.0f)'
+                    % (_sch_stats['floored'], _sch_stats['relaxed'], _sch_stats['tightened'],
+                       _sch_stats['kept'], _sch_target, _sch_relax, _sch_floor))
 
     # # Save sdf mols
     sdf_dir = os.path.join(log_dir, 'SDF')

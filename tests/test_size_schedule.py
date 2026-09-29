@@ -100,6 +100,39 @@ def test_real_trajectory_never_relaxes_when_on_target():
     print("PASS 真实 1 原子/步 轨迹下：≥24 原子后不再被干预（只在真偏小时放松）")
 
 
+def test_floor_s2_hard_size_floor():
+    """S2 尺寸下限：前 floor_steps 步一律用 floor_thr（方向由构造保证）。
+
+    依据（§5.47）：每步恰好 1 个重原子 → "前 N 步强制继续长" ≡ "分子至少 N 个重原子"。
+    这比阈值微调可靠：实测阈值→尺寸**并不单调**（v10 在 thr −0.25 时 HA 反而 25/19，§5.48）。
+    """
+    sched = {'floor_steps': 24, 'floor_thr': -2.0, 'target_ha': 28,
+             'warmup_frac': 0.25, 'relax': 0.35, 'slack': 4.0}
+    # 第 1..23 步：无论大小，一律用 floor_thr
+    for step in (1, 10, 23):
+        thr, act = f(0.0, step, step, 40, sched)
+        assert act == 'floor' and abs(thr + 2.0) < 1e-9, (step, thr, act)
+    # 第 24 步起：回到恒温器逻辑（24 ≥ 28-4 → keep）
+    thr2, act2 = f(0.0, 24, 24, 40, sched)
+    assert act2 == 'keep' and abs(thr2) < 1e-9, (thr2, act2)
+    # 只开 S2（target_ha=0，恒温器关闭）也要生效
+    sched2 = {'floor_steps': 5, 'floor_thr': -1.5}
+    thr3, act3 = f(0.0, 2, 2, 40, sched2)
+    assert act3 == 'floor' and abs(thr3 + 1.5) < 1e-9, (thr3, act3)
+    thr4, act4 = f(0.0, 6, 6, 40, sched2)
+    assert act4 == 'off' and abs(thr4) < 1e-9, (thr4, act4)
+    print("PASS S2 下限期：前 N 步强制 floor_thr；之后回到恒温器/关闭；可单独使用")
+
+
+def test_floor_takes_precedence_over_thermostat():
+    """下限期优先于恒温器（避免两个机制在同一步互相覆盖）。"""
+    sched = {'floor_steps': 10, 'floor_thr': -2.0, 'target_ha': 28,
+             'warmup_frac': 0.25, 'relax': 0.35, 'slack': 4.0}
+    thr, act = f(0.0, 3, 3, 40, sched)   # 又小又在限期内 → 应判 floor
+    assert act == 'floor' and abs(thr + 2.0) < 1e-9, (thr, act)
+    print("PASS 下限期优先于恒温器")
+
+
 if __name__ == "__main__":
     test_off_is_identity()
     test_warmup_no_intervention()
@@ -107,4 +140,6 @@ if __name__ == "__main__":
     test_tighten_only_when_enabled()
     test_absolute_size_thermostat()
     test_real_trajectory_never_relaxes_when_on_target()
-    print("ALL PASS (6/6)")
+    test_floor_s2_hard_size_floor()
+    test_floor_takes_precedence_over_thermostat()
+    print("ALL PASS (8/8)")

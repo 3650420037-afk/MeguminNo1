@@ -86,13 +86,16 @@ def build_config(args, center, out_cfg):
     s.setdefault("threshold", {})["frontier_threshold"] = float(
         getattr(args, "_thr", 0.0))
     # 轨迹内尺寸调度 S1（默认关闭）：只有 target_ha>0 才写进配置 → 关闭时不产生任何行为差异
-    if float(getattr(args, "schedule_target_ha", 0) or 0) > 0:
+    if (float(getattr(args, "schedule_target_ha", 0) or 0) > 0
+            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0):
         s["threshold"]["frontier_threshold_schedule"] = {
             "target_ha": float(args.schedule_target_ha),
             "slack": float(args.schedule_slack),
             "relax": float(args.schedule_relax),
             "tighten": float(args.schedule_tighten),
             "warmup_frac": float(args.schedule_warmup),
+            "floor_steps": float(args.schedule_floor_steps),
+            "floor_thr": float(args.schedule_floor_thr),
         }
     s["relax_output"] = bool(args.relax)
     ensure_dir(os.path.dirname(out_cfg))
@@ -143,6 +146,11 @@ def main():
                     help="S1 超前时上调幅度（0=不上调）")
     ap.add_argument("--schedule-warmup", type=float, default=0.25,
                     help="S1 前若干比例步数不干预")
+    ap.add_argument("--schedule-floor-steps", type=float, default=0.0,
+                    help="**S2 尺寸下限**（默认 0=关闭）：前 N 步一律用 --schedule-floor-thr；"
+                         "因实测每步恰好 1 个重原子，等价于'分子至少 N 个重原子'，方向由构造保证")
+    ap.add_argument("--schedule-floor-thr", type=float, default=-2.0,
+                    help="S2 下限期使用的阈值（越小越强制继续生长）")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()
@@ -177,10 +185,13 @@ def main():
     print("  引导 = %s (λ=%.2f, 多样性w=%.2f, 构象精修=%s)" % (
         "开" if args.lam > 0 else "关", args.lam, args.diversity_w, bool(args.relax)))
     print("  停止阈值 frontier_threshold = %+.2f  (来源: %s)" % (args._thr, thr_src))
-    if float(getattr(args, "schedule_target_ha", 0) or 0) > 0:
-        print("  尺寸调度 S1 = 开: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f"
+    if (float(getattr(args, "schedule_target_ha", 0) or 0) > 0
+            or float(getattr(args, "schedule_floor_steps", 0) or 0) > 0):
+        print("  尺寸调度 = 开: S1(target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f)"
+              " | S2(floor_steps=%.0f floor_thr=%.2f)"
               % (args.schedule_target_ha, args.schedule_slack, args.schedule_relax,
-                 args.schedule_tighten, args.schedule_warmup))
+                 args.schedule_tighten, args.schedule_warmup,
+                 args.schedule_floor_steps, args.schedule_floor_thr))
     print("  输出 = %s" % run_dir)
     print("=" * 74, flush=True)
 
