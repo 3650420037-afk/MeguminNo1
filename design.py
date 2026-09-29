@@ -85,6 +85,15 @@ def build_config(args, center, out_cfg):
     # 推荐阈值随权重走：CLI 显式传参 > 权重内置/侧车表 > 0.0（原版行为）
     s.setdefault("threshold", {})["frontier_threshold"] = float(
         getattr(args, "_thr", 0.0))
+    # 轨迹内尺寸调度 S1（默认关闭）：只有 target_ha>0 才写进配置 → 关闭时不产生任何行为差异
+    if float(getattr(args, "schedule_target_ha", 0) or 0) > 0:
+        s["threshold"]["frontier_threshold_schedule"] = {
+            "target_ha": float(args.schedule_target_ha),
+            "slack": float(args.schedule_slack),
+            "relax": float(args.schedule_relax),
+            "tighten": float(args.schedule_tighten),
+            "warmup_frac": float(args.schedule_warmup),
+        }
     s["relax_output"] = bool(args.relax)
     ensure_dir(os.path.dirname(out_cfg))
     with open(out_cfg, "w", encoding="utf-8") as f:
@@ -124,6 +133,16 @@ def main():
                     help="生长前沿判定阈值(决定何时停止, 直接控制分子大小)。"
                          "不传=用**该权重自己的推荐值**(见 models/threshold_recommendations.json; "
                          "v10/官方 推荐 0.0、v3 推荐 -0.5); 传 0.0 可强制回原版行为")
+    ap.add_argument("--schedule-target-ha", type=float, default=0.0,
+                    help="**轨迹内尺寸调度 S1**（默认 0=关闭，关闭时行为与历史逐位一致）："
+                         "目标重原子数；对每个在长分子按步数线性外推期望值，落后超过 --schedule-slack "
+                         "就把该分子本步的 frontier 阈值下调 --schedule-relax（鼓励继续长）")
+    ap.add_argument("--schedule-slack", type=float, default=4.0, help="S1 容差（重原子数）")
+    ap.add_argument("--schedule-relax", type=float, default=0.35, help="S1 落后时下调幅度")
+    ap.add_argument("--schedule-tighten", type=float, default=0.0,
+                    help="S1 超前时上调幅度（0=不上调）")
+    ap.add_argument("--schedule-warmup", type=float, default=0.25,
+                    help="S1 前若干比例步数不干预")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()
@@ -158,6 +177,10 @@ def main():
     print("  引导 = %s (λ=%.2f, 多样性w=%.2f, 构象精修=%s)" % (
         "开" if args.lam > 0 else "关", args.lam, args.diversity_w, bool(args.relax)))
     print("  停止阈值 frontier_threshold = %+.2f  (来源: %s)" % (args._thr, thr_src))
+    if float(getattr(args, "schedule_target_ha", 0) or 0) > 0:
+        print("  尺寸调度 S1 = 开: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f"
+              % (args.schedule_target_ha, args.schedule_slack, args.schedule_relax,
+                 args.schedule_tighten, args.schedule_warmup))
     print("  输出 = %s" % run_dir)
     print("=" * 74, flush=True)
 

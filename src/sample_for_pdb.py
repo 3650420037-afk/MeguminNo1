@@ -21,6 +21,35 @@ from sample import *    # Import everything from `sample.py`
 from utils.guidance import chem_score, logp_to_rank_prob_guided, diversity_penalty
 
 
+def size_schedule_threshold(base_thr, n_ha, step_i, max_steps, sched):
+    """轨迹内尺寸调度（S1）：返回该分子本步应使用的 frontier 阈值。
+
+    sched（dict，缺省/`target_ha`<=0 时**恒返回 base_thr**，即与历史行为逐位一致）：
+      target_ha   目标重原子数（如数据先验 28–29）
+      slack       容差（重原子数）
+      relax       落后时下调的幅度（<0 方向 = 更容易判为 frontier = 继续长）
+      tighten     超前时上调的幅度（默认 0 = 不上调）
+      warmup_frac 前若干比例的步数不干预（让模型自行起步）
+
+    返回 (阈值, 动作) —— 动作用于统计/留痕，取值 'off'/'warmup'/'relax'/'tighten'/'keep'。
+    """
+    sched = sched or {}
+    target = float(sched.get('target_ha', 0) or 0)
+    if target <= 0:
+        return base_thr, 'off'
+    prog = step_i / float(max(1, max_steps))
+    if prog < float(sched.get('warmup_frac', 0.25)):
+        return base_thr, 'warmup'
+    slack = float(sched.get('slack', 4.0))
+    expect = max(1.0, target * prog)
+    if n_ha < expect - slack:
+        return base_thr - float(sched.get('relax', 0.35)), 'relax'
+    tighten = float(sched.get('tighten', 0.0))
+    if tighten > 0 and n_ha > expect + slack:
+        return base_thr + tighten, 'tighten'
+    return base_thr, 'keep'
+
+
 def pdb_to_pocket_data(pdb_path, center, bbox_size):
     center = torch.FloatTensor(center)
     warnings.simplefilter('ignore', BiopythonWarning)
@@ -164,6 +193,38 @@ if __name__ == '__main__':
     _frontier_thr = float(config.sample.threshold.get('frontier_threshold', 0))
     if _frontier_thr:
         logger.info('frontier_threshold = %.4f (非默认, 会改变分子大小分布)' % _frontier_thr)
+
+    # ==== 轨迹内尺寸调度（S1，2026-09-29 新增，默认关闭；关闭时行为与历史逐位一致）====
+    # 动机（§5.33/§5.45）：v10 的残余差距 ~44% 由分子尺寸解释，"掉进小模式"是**轨迹早期**就发生的；
+    # 固定的 frontier 阈值无法对"已经落后于目标尺寸"的个体做纠正。
+    # 做法：每一步、对**每个在长分子**比较"当前重原子数"与"按步数线性外推的目标值"，
+    # 落后超过 slack 就把该分子的阈值下调 relax（鼓励继续长）；超前可选上调 tighten。
+    # 关键词：sample.threshold.frontier_threshold_schedule.{target_ha,slack,relax,tighten,warmup_frac}
+    # 元素表只有 C/N/O/S/Se（重原子），故 ligand_context_element.numel() 即重原子数。
+    _sched = config.sample.threshold.get('frontier_threshold_schedule', None) or {}
+    _sch_target = float(_sched.get('target_ha', 0) or 0)
+    _sch_slack = float(_sched.get('slack', 4.0))
+    _sch_relax = float(_sched.get('relax', 0.35))
+    _sch_tighten = float(_sched.get('tighten', 0.0))
+    _sch_warmup = float(_sched.get('warmup_frac', 0.25))
+    _sch_stats = {'relaxed': 0, 'tightened': 0, 'kept': 0}
+    if _sch_target > 0:
+        logger.info('尺寸调度开启: target_ha=%.1f slack=%.1f relax=%.2f tighten=%.2f warmup=%.2f'
+                    % (_sch_target, _sch_slack, _sch_relax, _sch_tighten, _sch_warmup))
+
+    def _thr_for(data_i, step_i):
+        """返回该分子本步应使用的 frontier 阈值（调度关闭时恒为 _frontier_thr）。"""
+        if _sch_target <= 0:
+            return _frontier_thr
+        try:
+            n_ha = int(data_i.ligand_context_element.numel())
+        except Exception:
+            return _frontier_thr
+        thr_i, action = size_schedule_threshold(
+            _frontier_thr, n_ha, step_i, config.sample.max_steps, _sched)
+        _sch_stats[{'relax': 'relaxed', 'tighten': 'tightened'}.get(action, 'kept')] += 1
+        return thr_i
+
     init_data_list = get_init(data.to(args.device),   # sample the initial atoms
             model = model,
             transform=atom_composer,
@@ -205,7 +266,7 @@ if __name__ == '__main__':
                     model = model,
                     transform = atom_composer,
                     threshold = config.sample.threshold,
-                    frontier_threshold = _frontier_thr
+                    frontier_threshold = _thr_for(data, global_step)
                 )
 
                 for data_next in data_next_list:
@@ -276,6 +337,10 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info('Terminated. Generated molecules will be saved.')
 
+    if _sch_target > 0:
+        logger.info('尺寸调度统计: 下调 %d 次 | 上调 %d 次 | 保持 %d 次 (target_ha=%.1f relax=%.2f)'
+                    % (_sch_stats['relaxed'], _sch_stats['tightened'], _sch_stats['kept'],
+                       _sch_target, _sch_relax))
 
     # # Save sdf mols
     sdf_dir = os.path.join(log_dir, 'SDF')
