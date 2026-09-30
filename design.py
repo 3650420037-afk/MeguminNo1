@@ -51,7 +51,7 @@ def resolve_target(args, reg):
     if args.target:
         if args.target not in reg:
             raise SystemExit("[design] 未知靶点 %s; 可选: %s"
-                             % (args.target, ", ".join(sorted(reg))))
+                             % (args.target, ", ".join(sorted(k for k in reg if not k.startswith("_")))))
         t = reg[args.target]
         pdb = t["pdb"] if os.path.isabs(t["pdb"]) else os.path.join(ROOT, t["pdb"])
         return pdb, list(t["center"]), args.target, t.get("ligand_smiles", "")

@@ -14,21 +14,6 @@
     "deposited_ligand_complete": true,
     "source": "data/targets/4EIY_配体ZMA.cif"
   },
-  "B2AR": {
-    "pdb": "data/targets/2RH1_β2肾上腺素受体.pdb",
-    "ligand_comp": "CAU",
-    "receptor": "HIGH RESOLUTION CRYSTAL STRUCTURE OF HUMAN B2-ADRENERGIC G PROTEIN- COUPLED RECEPTOR.",
-    "ligand_smiles": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12",
-    "center": [
-      -29.52,
-      9.23,
-      6.94
-    ],
-    "n_ligand_heavy": 22,
-    "n_smiles_heavy": 22,
-    "deposited_ligand_complete": true,
-    "source": "data/targets/2RH1_配体CAU.cif"
-  },
   "D3": {
     "pdb": "data/targets/3PBL_D3多巴胺受体.pdb",
     "ligand_comp": "ETQ",
@@ -199,5 +184,27 @@
     "pdb_id": "4DJH",
     "uniprot": "P41145",
     "chembl": "CHEMBL237"
+  },
+  "_disabled": {
+    "B2AR": {
+      "pdb": "data/targets/2RH1_β2肾上腺素受体.pdb",
+      "ligand_comp": "CAU",
+      "receptor": "HIGH RESOLUTION CRYSTAL STRUCTURE OF HUMAN B2-ADRENERGIC G PROTEIN- COUPLED RECEPTOR.",
+      "ligand_smiles": "CC(C)NCC(O)COc1cccc2[nH]c3ccccc3c12",
+      "center": [
+        -29.52,
+        9.23,
+        6.94
+      ],
+      "n_ligand_heavy": 22,
+      "n_smiles_heavy": 22,
+      "deposited_ligand_complete": true,
+      "source": "data/targets/2RH1_配体CAU.cif",
+      "_disabled_reason": "用户决策（2026-09-30）：本代（v10）B2AR 药库对接显著劣于上一代（中位 −9.81 vs −10.91，强于 −10 占比 37.3% vs 74.2%，Mann-Whitney p<0.0001），故**停止对 B2AR 的生成**。",
+      "_disabled_scope": "仅禁用**生成入口**：不影响其他 GPCR 靶点的生成（单权重、口袋条件、各靶点采样独立）；**未改动训练数据、未重训模型**。",
+      "_evidence": "docs/任务状态与记忆.md §5.60、results/README.md「本代 vs 上一代」表、other/library_backups/20260930_001605_v2_libraries/B2AR",
+      "_restore": "把本条目移回顶层即可恢复；旧库仍在 other/library_backups/ 与 results/B2AR/。",
+      "_disabled_at": "2026-09-30"
+    }
   }
 }
