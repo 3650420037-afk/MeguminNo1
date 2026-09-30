@@ -1,64 +1,63 @@
 script                  : D:\MMModel\src\scripts\build_library.py
 rdkit                   : 2026.03.5
-runs                    : sample_for_pdb_2026_09_26__23_47_46;sample_for_pdb_2026_09_27__00_23_30;sample_for_pdb_2026_09_27__00_57_40;sample_for_pdb_2026_09_27__01_02_00;sample_for_pdb_2026_09_27__01_12_22;sample_for_pdb_2026_09_27__01_24_20
+runs                    : D3_20260930_031649;D3_20260930_032242;D3_20260930_032757;D3_20260930_033427;D3_20260930_033927
 mode                    : rebuild
 filter                  : PAINS+BRENK, MW[250,500], LogP[1,5], QED>=0.4, SA<=6, elements=CNOFPSCl, rings>=1
-raw_lines               : 873
+raw_lines               : 254
 invalid_smiles          : 0
-unique_canonical        : 860
-kept                    : 217
-pdbqt_ready             : 217
-elapsed_sec             : 12.4
+unique_canonical        : 249
+kept                    : 106
+pdbqt_ready             : 106
+elapsed_sec             : 2.8
 
 ---- filter funnel ----
-  raw SMILES lines read                     873
+  raw SMILES lines read                     254
   invalid/unparseable (dropped)               0
-  unique canonical SMILES (deduped)         860
-  after PAINS                               852  (-8, 99.1% of unique)
-  after BRENK                               637  (-215, 74.1% of unique)
-  after MW in [250, 500]                    275  (-362, 32.0% of unique)
-  after Crippen LogP in [1, 5]              222  (-53, 25.8% of unique)
-  after QED >= 0.4                          222  (-0, 25.8% of unique)
-  after SA score <= 6                       220  (-2, 25.6% of unique)
-  after elements CNOFPSCl                   220  (-0, 25.6% of unique)
-  after rings >= 1                          217  (-3, 25.2% of unique)
-  final library compounds                   217
-  with 3D SDF (pdbqt_ready)                 217
+  unique canonical SMILES (deduped)         249
+  after PAINS                               244  (-5, 98.0% of unique)
+  after BRENK                               194  (-50, 77.9% of unique)
+  after MW in [250, 500]                    122  (-72, 49.0% of unique)
+  after Crippen LogP in [1, 5]              106  (-16, 42.6% of unique)
+  after QED >= 0.4                          106  (-0, 42.6% of unique)
+  after SA score <= 6                       106  (-0, 42.6% of unique)
+  after elements CNOFPSCl                   106  (-0, 42.6% of unique)
+  after rings >= 1                          106  (-0, 42.6% of unique)
+  final library compounds                   106
+  with 3D SDF (pdbqt_ready)                 106
 
 ---- library stats ----
-unique murcko scaffolds: 120
+unique murcko scaffolds: 88
 top scaffolds:
-  C1=Cc2ccc3c(c2CC1)CCCN3                                      23
-  c1ccccc1                                                     14
-  O=c1c2c3n(c(=O)n1-c1ccccc1)COCN3C(c1ccccc1)=CC2               9
-  O=C(CNCc1ccccc1)N1CCNCC1                                      8
-  O=C(CNCc1cccc2ccccc12)N1CCNCC1                                7
-  O=C(Cc1ccccc1)NC=CC=c1cccc2c1=C(C1CCCC1)OC2                   7
-  O=C(CCc1ccccc1)N1CCCC1c1ccccc1                                6
-  c1ccc2c3c(ccc2c1)NCCC3                                        4
-  O=C1CCCC(COc2ccccc2)C1                                        4
-  O=C(Nc1ccccc1)C1CCCN1C(=O)CCc1ccccc1                          4
-  qed   : min=0.477  median=0.768  max=0.933  n=217
-  sa    : min=1.816  median=3.247  max=5.945  n=217
-  mw    : min=250.263  median=378.516  max=490.525  n=217
-  logp  : min=1.097  median=3.723  max=4.994  n=217
----- QED distribution (n=217) ----
+  O=C(CN1CCNCC1)N1CCC(n2cccc2-c2ccsc2)CC1                       3
+  c1ccccc1                                                      3
+  O=C1CCCCN1CCNc1nccc(-c2ccccc2)n1                              2
+  c1ccc(-c2ccnc(NCCN3CCNC4(CCCCC4)C3)n2)cc1                     2
+  O=C(CN1CCCC1)N1CCN(C(=O)c2ccccc2)CC1                          2
+  c1ccc(C2=C(CN3CCNCC3)NCC2)cc1                                 2
+  O=C1COCCN1CCNc1nccc(-c2ccccc2)n1                              2
+  c1ccc(COc2ccc(CCN3CCNCC3)cc2)cc1                              2
+  O=C(Nc1cccc(-c2ccccc2)c1)C1=CCCN1                             2
+  C1=NC2=CCCN2C(COc2ccccc2)=C1                                  2
+  qed   : min=0.624  median=0.795  max=0.947  n=106
+  sa    : min=1.736  median=2.984  max=4.830  n=106
+  mw    : min=257.717  median=364.398  max=446.573  n=106
+  logp  : min=1.019  median=2.998  max=4.814  n=106
+---- QED distribution (n=106) ----
   0.0-0.1 |                                          0
   0.1-0.2 |                                          0
   0.2-0.3 |                                          0
   0.3-0.4 |                                          0
-  0.4-0.5 | #                                        1
-  0.5-0.6 | ##########                               19
-  0.6-0.7 | ######################                   42
-  0.7-0.8 | ######################################## 78
-  0.8-0.9 | ###################################      69
-  0.9-1.0 | ####                                     8
+  0.4-0.5 |                                          0
+  0.5-0.6 |                                          0
+  0.6-0.7 | ###############                          16
+  0.7-0.8 | ####################################     38
+  0.8-0.9 | ######################################## 42
+  0.9-1.0 | ##########                               10
 ---- per run (raw lines / final kept+merged / rejected) ----
-  sample_for_pdb_2026_09_26__23_47_46      raw=170    kept=36    rejected=134
-  sample_for_pdb_2026_09_27__00_23_30      raw=179    kept=29    rejected=150
-  sample_for_pdb_2026_09_27__00_57_40      raw=98     kept=48    rejected=50
-  sample_for_pdb_2026_09_27__01_02_00      raw=173    kept=54    rejected=119
-  sample_for_pdb_2026_09_27__01_12_22      raw=63     kept=10    rejected=53
-  sample_for_pdb_2026_09_27__01_24_20      raw=190    kept=40    rejected=150
+  D3_20260930_031649                       raw=50     kept=26    rejected=24
+  D3_20260930_032242                       raw=50     kept=18    rejected=32
+  D3_20260930_032757                       raw=51     kept=28    rejected=23
+  D3_20260930_033427                       raw=50     kept=12    rejected=38
+  D3_20260930_033927                       raw=53     kept=22    rejected=31
 ---- timing ----
-  read+normalize 0.3s | filter+props 7.7s | sdf 4.4s | total 12.4s
+  read+normalize 0.0s | filter+props 1.0s | sdf 1.7s | total 2.8s

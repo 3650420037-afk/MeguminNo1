@@ -1,64 +1,64 @@
 script                  : D:\MMModel\src\scripts\build_library.py
 rdkit                   : 2026.03.5
-runs                    : sample_for_pdb_2026_09_27__01_42_36;sample_for_pdb_2026_09_27__01_54_34;sample_for_pdb_2026_09_27__02_06_18;sample_for_pdb_2026_09_27__02_18_36;sample_for_pdb_2026_09_27__02_30_39;sample_for_pdb_2026_09_27__02_42_22
+runs                    : 5HT2B_20260930_034501;5HT2B_20260930_035255;5HT2B_20260930_040255;5HT2B_20260930_041109;5HT2B_20260930_041846;5HT2B_20260930_042845
 mode                    : rebuild
 filter                  : PAINS+BRENK, MW[250,500], LogP[1,5], QED>=0.4, SA<=6, elements=CNOFPSCl, rings>=1
-raw_lines               : 1016
+raw_lines               : 314
 invalid_smiles          : 0
-unique_canonical        : 1008
-kept                    : 252
-pdbqt_ready             : 251
-elapsed_sec             : 225.1
+unique_canonical        : 314
+kept                    : 206
+pdbqt_ready             : 206
+elapsed_sec             : 5.4
 
 ---- filter funnel ----
-  raw SMILES lines read                    1016
+  raw SMILES lines read                     314
   invalid/unparseable (dropped)               0
-  unique canonical SMILES (deduped)        1008
-  after PAINS                              1003  (-5, 99.5% of unique)
-  after BRENK                               811  (-192, 80.5% of unique)
-  after MW in [250, 500]                    293  (-518, 29.1% of unique)
-  after Crippen LogP in [1, 5]              254  (-39, 25.2% of unique)
-  after QED >= 0.4                          254  (-0, 25.2% of unique)
-  after SA score <= 6                       253  (-1, 25.1% of unique)
-  after elements CNOFPSCl                   253  (-0, 25.1% of unique)
-  after rings >= 1                          252  (-1, 25.0% of unique)
-  final library compounds                   252
-  with 3D SDF (pdbqt_ready)                 251
+  unique canonical SMILES (deduped)         314
+  after PAINS                               311  (-3, 99.0% of unique)
+  after BRENK                               266  (-45, 84.7% of unique)
+  after MW in [250, 500]                    244  (-22, 77.7% of unique)
+  after Crippen LogP in [1, 5]              206  (-38, 65.6% of unique)
+  after QED >= 0.4                          206  (-0, 65.6% of unique)
+  after SA score <= 6                       206  (-0, 65.6% of unique)
+  after elements CNOFPSCl                   206  (-0, 65.6% of unique)
+  after rings >= 1                          206  (-0, 65.6% of unique)
+  final library compounds                   206
+  with 3D SDF (pdbqt_ready)                 206
 
 ---- library stats ----
-unique murcko scaffolds: 177
+unique murcko scaffolds: 144
 top scaffolds:
-  O=C1CN(C(=O)C(Cc2ccccc2)c2ccccc2)CCN1                        10
-  O=C1CN2C(=O)CN(C(=O)C3c4ccccc4NC4Cc5ccccc5C43)CC2CN1          6
-  O=c1[nH]ccc2ccccc12                                           4
-  O=C(C1c2ccccc2NC2Cc3ccccc3C21)N1CC(=O)N2CC(=O)N3C=CC=NC3C2    4
-  O=C(Nc1ccccc1CN1CCOC1=O)C1CCCCC1                              4
-  O=C(NCC1CCC2Cc3ccccc3CN2C1)c1ccccc1                           4
-  O=C(NCC1CCCN(Cc2ccccc2)C1)c1ccccc1                            4
-  O=C1CC(C(=O)NCC(=O)NC2CCCC2)CCN1                              4
-  O=C1c2cncn2C(=O)CN1Cc1ccc2c(c1)C(Cc1ccccc1)CCCO2              4
-  O=C(NCC1C=Nc2ccccc21)c1ccccc1                                 4
-  qed   : min=0.408  median=0.734  max=0.941  n=252
-  sa    : min=1.762  median=3.535  max=5.981  n=252
-  mw    : min=251.301  median=417.546  max=499.533  n=252
-  logp  : min=1.037  median=3.408  max=4.997  n=252
----- QED distribution (n=252) ----
+  O=C1CN(Cc2ccc(-c3ccccc3)[nH]c2=O)CC2CCCCN12                  11
+  O=C(NCC(=O)N1CCc2cc(C(=O)N3CCCC3)ccc21)c1ccccc1               6
+  O=C1c2ccc(Oc3cccc4c3CCC=N4)cc2C2CNCCN12                       5
+  O=C(Cc1cccc2c1CCO2)N1CCCC1                                    5
+  O=C(NC1CCCCC1)C1=C(Cc2ccccc2)NCCC1                            5
+  c1cc2ccc(NC3CCNCC3)cc2o1                                      4
+  O=C(NC1CCN2C(=O)COC=C2C1)C1CCC2(COc3ccccc3C2)O1               4
+  O=C(NCC(=O)N1CC2CCCC2C1)c1ccccc1                              4
+  O=C1CN(Cc2nc(-c3ccccc3)nc3ccccc23)CC2CCCCN12                  4
+  O=C(NC1CCCCC1)C1=C(CCCn2ccccc2=O)NCC=C1                       4
+  qed   : min=0.512  median=0.805  max=0.929  n=206
+  sa    : min=1.922  median=3.496  max=5.627  n=206
+  mw    : min=259.353  median=395.503  max=498.583  n=206
+  logp  : min=1.009  median=2.730  max=4.987  n=206
+---- QED distribution (n=206) ----
   0.0-0.1 |                                          0
   0.1-0.2 |                                          0
   0.2-0.3 |                                          0
   0.3-0.4 |                                          0
-  0.4-0.5 | ##                                       3
-  0.5-0.6 | ###############                          29
-  0.6-0.7 | #####################################    72
-  0.7-0.8 | ######################################## 77
-  0.8-0.9 | ###########################              52
-  0.9-1.0 | ##########                               19
+  0.4-0.5 |                                          0
+  0.5-0.6 | ###                                      7
+  0.6-0.7 | ###########                              27
+  0.7-0.8 | ##########################               62
+  0.8-0.9 | ######################################## 96
+  0.9-1.0 | ######                                   14
 ---- per run (raw lines / final kept+merged / rejected) ----
-  sample_for_pdb_2026_09_27__01_42_36      raw=201    kept=33    rejected=168
-  sample_for_pdb_2026_09_27__01_54_34      raw=204    kept=61    rejected=144
-  sample_for_pdb_2026_09_27__02_06_18      raw=195    kept=24    rejected=171
-  sample_for_pdb_2026_09_27__02_18_36      raw=98     kept=23    rejected=75
-  sample_for_pdb_2026_09_27__02_30_39      raw=203    kept=66    rejected=137
-  sample_for_pdb_2026_09_27__02_42_22      raw=115    kept=45    rejected=70
+  5HT2B_20260930_034501                    raw=50     kept=41    rejected=9
+  5HT2B_20260930_035255                    raw=54     kept=23    rejected=31
+  5HT2B_20260930_040255                    raw=51     kept=34    rejected=17
+  5HT2B_20260930_041109                    raw=56     kept=42    rejected=14
+  5HT2B_20260930_041846                    raw=50     kept=31    rejected=19
+  5HT2B_20260930_042845                    raw=53     kept=35    rejected=18
 ---- timing ----
-  read+normalize 0.5s | filter+props 11.2s | sdf 213.3s | total 225.1s
+  read+normalize 0.1s | filter+props 1.5s | sdf 3.8s | total 5.4s

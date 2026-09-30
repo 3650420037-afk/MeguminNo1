@@ -1,70 +1,69 @@
 script                  : D:\MMModel\src\scripts\build_library.py
 rdkit                   : 2026.03.5
-runs                    : sample_for_pdb_2026_09_26__19_16_04;sample_for_pdb_2026_09_26__19_36_07;sample_for_pdb_2026_09_26__19_45_41;sample_for_pdb_2026_09_26__19_59_47;sample_for_pdb_2026_09_26__20_06_11;sample_for_pdb_2026_09_26__20_27_30;sample_for_pdb_2026_09_26__20_40_45;sample_for_pdb_2026_09_26__20_51_51;sample_for_pdb_2026_09_26__21_02_11;sample_for_pdb_2026_09_26__21_10_16;sample_for_pdb_2026_09_26__21_21_41;sample_for_pdb_2026_09_26__21_36_38
+runs                    : A2A_20260930_010709;A2A_20260930_011353;A2A_20260930_012211;A2A_20260930_012942;A2A_20260930_013641;A2A_20260930_014433;A2A_20260930_015227;A2A_20260930_015926;A2A_20260930_020628;A2A_20260930_021502;A2A_20260930_022253
 mode                    : rebuild
 filter                  : PAINS+BRENK, MW[250,500], LogP[1,5], QED>=0.4, SA<=6, elements=CNOFPSCl, rings>=1
-raw_lines               : 1857
+raw_lines               : 583
 invalid_smiles          : 0
-unique_canonical        : 1721
-kept                    : 521
-pdbqt_ready             : 521
-elapsed_sec             : 32.9
+unique_canonical        : 576
+kept                    : 395
+pdbqt_ready             : 395
+elapsed_sec             : 9.8
 
 ---- filter funnel ----
-  raw SMILES lines read                    1857
+  raw SMILES lines read                     583
   invalid/unparseable (dropped)               0
-  unique canonical SMILES (deduped)        1721
-  after PAINS                              1690  (-31, 98.2% of unique)
-  after BRENK                              1253  (-437, 72.8% of unique)
-  after MW in [250, 500]                    574  (-679, 33.4% of unique)
-  after Crippen LogP in [1, 5]              522  (-52, 30.3% of unique)
-  after QED >= 0.4                          521  (-1, 30.3% of unique)
-  after SA score <= 6                       521  (-0, 30.3% of unique)
-  after elements CNOFPSCl                   521  (-0, 30.3% of unique)
-  after rings >= 1                          521  (-0, 30.3% of unique)
-  final library compounds                   521
-  with 3D SDF (pdbqt_ready)                 521
+  unique canonical SMILES (deduped)         576
+  after PAINS                               560  (-16, 97.2% of unique)
+  after BRENK                               478  (-82, 83.0% of unique)
+  after MW in [250, 500]                    429  (-49, 74.5% of unique)
+  after Crippen LogP in [1, 5]              395  (-34, 68.6% of unique)
+  after QED >= 0.4                          395  (-0, 68.6% of unique)
+  after SA score <= 6                       395  (-0, 68.6% of unique)
+  after elements CNOFPSCl                   395  (-0, 68.6% of unique)
+  after rings >= 1                          395  (-0, 68.6% of unique)
+  final library compounds                   395
+  with 3D SDF (pdbqt_ready)                 395
 
 ---- library stats ----
-unique murcko scaffolds: 373
+unique murcko scaffolds: 261
 top scaffolds:
-  O=C(Cn1ccccc1=O)NCc1cccc2ccccc12                             12
-  O=C(NCCc1cn2c(=O)cc3c4c2c1CCOC=4C=CC3)C1CCNC1                 7
-  O=C(Nc1ccccc1)c1ccc2c(c1)C(=O)N1CCCCC1C2                      6
-  c1cc2c3c(cccc3c1)C1CCCC1C2                                    5
-  O=C(CN1CCCC1=O)NCC(=O)N(Cc1ccccc1)C(=O)c1ccccc1               5
-  O=C1CCCCN1CCc1cc2c(-c3ccccc3)cccc2cn1                         5
-  O=C1CCCC2C3=NCCc4cc5c6c(c43)=C(CN12)C(=Cc1ccccc1)C=6OCO5      4
-  O=C1N=CC(=O)n2cc(CCNC(=O)C3CCCCCC3)cc21                       4
-  O=C(CNC(=O)CN1CCCC1=O)NCCCc1ccccc1                            4
-  O=C(CC1CCNC1)N1CCOC(c2cccc3ncccc23)C1                         4
-  qed   : min=0.410  median=0.757  max=0.941  n=521
-  sa    : min=1.533  median=3.224  max=5.462  n=521
-  mw    : min=250.301  median=390.483  max=499.611  n=521
-  logp  : min=1.072  median=3.077  max=4.998  n=521
----- QED distribution (n=521) ----
+  O=C(NC1CCCC1)c1ccn(-c2cccc(-c3ccccc3)c2)n1                   10
+  O=C(c1cccc(-n2ccc3ccccc32)c1)N1CCCCC1                         7
+  O=C(c1cccc(N2CC(Cc3ccccc3)NC2=O)c1)N1CCOCC1                   6
+  O=C(c1cccc(-n2ccc3ccccc32)c1)N1CCNCC1                         6
+  O=C(Cc1nc2ccc(Oc3ccccc3)cc2[nH]1)N1CCCC1                      5
+  O=C(NC1CCCC1)c1cccc(Cn2ccccc2=O)c1                            5
+  O=C(NC1CCCCC1)c1cccc(-n2c(=O)ncc3ccccc32)c1                   5
+  O=C(c1cccc(N2CC(Cc3ccccc3)NC2=O)c1)N1CCCCC1                   5
+  O=C(NC1CCNCC1)c1ccn(-c2cccc(-c3ccccc3)c2)n1                   4
+  O=C1c2ccc(-c3ccccc3)cc2NC2CCCCN12                             4
+  qed   : min=0.414  median=0.735  max=0.944  n=395
+  sa    : min=1.374  median=3.051  max=5.793  n=395
+  mw    : min=253.257  median=403.409  max=499.543  n=395
+  logp  : min=1.007  median=2.958  max=4.977  n=395
+---- QED distribution (n=395) ----
   0.0-0.1 |                                          0
   0.1-0.2 |                                          0
   0.2-0.3 |                                          0
   0.3-0.4 |                                          0
-  0.4-0.5 | #####                                    18
-  0.5-0.6 | #################                        63
-  0.6-0.7 | ############################             104
-  0.7-0.8 | ######################################## 149
-  0.8-0.9 | #######################################  145
-  0.9-1.0 | ###########                              42
+  0.4-0.5 | ###                                      9
+  0.5-0.6 | #########                                30
+  0.6-0.7 | ##############################           103
+  0.7-0.8 | ######################################## 138
+  0.8-0.9 | ############################             96
+  0.9-1.0 | ######                                   19
 ---- per run (raw lines / final kept+merged / rejected) ----
-  sample_for_pdb_2026_09_26__19_16_04      raw=99     kept=32    rejected=67
-  sample_for_pdb_2026_09_26__19_36_07      raw=202    kept=57    rejected=145
-  sample_for_pdb_2026_09_26__19_45_41      raw=157    kept=35    rejected=122
-  sample_for_pdb_2026_09_26__19_59_47      raw=117    kept=61    rejected=56
-  sample_for_pdb_2026_09_26__20_06_11      raw=117    kept=61    rejected=56
-  sample_for_pdb_2026_09_26__20_27_30      raw=162    kept=46    rejected=116
-  sample_for_pdb_2026_09_26__20_40_45      raw=190    kept=34    rejected=156
-  sample_for_pdb_2026_09_26__20_51_51      raw=202    kept=37    rejected=165
-  sample_for_pdb_2026_09_26__21_02_11      raw=200    kept=65    rejected=135
-  sample_for_pdb_2026_09_26__21_10_16      raw=132    kept=72    rejected=60
-  sample_for_pdb_2026_09_26__21_21_41      raw=124    kept=36    rejected=88
-  sample_for_pdb_2026_09_26__21_36_38      raw=155    kept=46    rejected=109
+  A2A_20260930_010709                      raw=54     kept=41    rejected=13
+  A2A_20260930_011353                      raw=54     kept=38    rejected=16
+  A2A_20260930_012211                      raw=50     kept=39    rejected=11
+  A2A_20260930_012942                      raw=55     kept=33    rejected=22
+  A2A_20260930_013641                      raw=54     kept=39    rejected=15
+  A2A_20260930_014433                      raw=52     kept=34    rejected=18
+  A2A_20260930_015227                      raw=51     kept=41    rejected=10
+  A2A_20260930_015926                      raw=59     kept=40    rejected=19
+  A2A_20260930_020628                      raw=50     kept=29    rejected=21
+  A2A_20260930_021502                      raw=50     kept=22    rejected=28
+  A2A_20260930_022253                      raw=54     kept=39    rejected=15
 ---- timing ----
-  read+normalize 0.8s | filter+props 19.9s | sdf 12.2s | total 32.9s
+  read+normalize 0.1s | filter+props 2.5s | sdf 7.1s | total 9.8s
