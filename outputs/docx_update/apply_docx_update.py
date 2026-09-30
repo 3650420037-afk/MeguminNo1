@@ -82,9 +82,10 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--docx", default=DOCX)
+    ap.add_argument("--src", default=SRC, help="新文本文件（@@SEC 二/三/四/五/六 分段）")
     args = ap.parse_args()
 
-    secs = load_sections(SRC)
+    secs = load_sections(args.src)
     print("读入节: %s" % sorted(secs))
     ok = True
     for k in ["二", "三", "四", "五", "六"]:
