@@ -1,11 +1,11 @@
 @@SEC 二
 一、研究意义
-GPCR 是最大的成药靶点家族，约三分之一已上市小分子药物以其为靶点，涉及帕金森病、哮喘、精神分裂症等疾病。其理性设计受制于膜蛋白结构难获取、口袋狭小亲脂、先导化合物类药性易被牺牲。基于对接的虚拟筛选只能在既有库中检索，无法创造新化学空间；三维生成模型虽能由口袋直接生成分子，却普遍存在分布偏离类药区域、实验难复现两个问题。因此建立一条"从口袋结构到候选清单"、可复现可追溯的全自动流程，对缩短 GPCR 先导发现周期有直接意义。
+GPCR 是最大的成药靶点家族，约三分之一已上市小分子药物以其为靶点，涉及帕金森病、哮喘、精神分裂症等疾病。其理性设计受制于膜蛋白结构难获取、口袋狭小亲脂、先导化合物类药性易被牺牲；基于对接的虚拟筛选只能在既有库中检索，无法创造新化学空间；三维生成模型虽能由口袋直接生成分子，却普遍存在分布偏离类药区域、实验难复现两个问题。因此建立一条"从口袋结构到候选清单"、可复现可追溯的全自动流程，对缩短 GPCR 先导发现周期有直接意义。
 
 二、国内外研究现状及发展动态
 （1）基于配体的生成（JT-VAE、REINVENT）依赖大量已知活性配体，而 GPCR 多靶点活性数据稀疏，泛化受限。
-（2）基于结构的三维生成：Pocket2Mol（ICML 2022）以等变图神经网络实现口袋条件自回归生成，TargetDiff、DiffSBDD 等把扩散模型引入该任务，为主流。共同瓶颈是评价口径不统一、类药性与合成可及性常被牺牲、复现成本高。
-（3）评估与判据：单一指标易过拟合。本项目补充四条实测结论：Vina 打分与尺寸强相关，须同报配体效率（LE）并在尺寸差超 15% 时警告；同臂噪声约 0.14、种子间约 0.7 kcal/mol，单种子不构成结论；A/B 口径须与出货口径同源（diversity_w=0.5），否则结论可反转；实测每步恰好增加 1 个重原子，尺寸与停止步数一一对应，故"尺寸漂移"是停止时刻的跳变，阈值—尺寸关系并非单调。
+（2）基于结构的三维生成：Pocket2Mol（ICML 2022）以等变图神经网络实现口袋条件自回归生成，TargetDiff、DiffSBDD 等把扩散模型引入该任务。共同瓶颈是评价口径不统一、类药性与合成可及性常被牺牲、复现成本高。
+（3）评估与判据：单一指标易过拟合。本项目补充四条结论：Vina 打分与尺寸强相关，须同报配体效率（LE）并在尺寸差超 15% 时警告；同臂噪声约 0.14、种子间约 0.7 kcal/mol，单种子不构成结论；A/B 口径须与出货口径同源（diversity_w=0.5），否则结论可反转；实测每步恰好增加 1 个重原子，尺寸与停止步数一一对应，故"尺寸漂移"是停止时刻的跳变，阈值—尺寸关系并非单调。
 （4）微调负向迁移是共识性教训：小规模数据微调后质量常低于预训练权重，而多数报道缺少严格对照与失败记录。本项目以十二个版本、十组以上对照定位到"每口袋样本密度"与"微调起点"，并保留全部失败与撤回记录。
 
 三、切入角度
@@ -14,7 +14,7 @@ GPCR 是最大的成药靶点家族，约三分之一已上市小分子药物以
 附：主要参考文献
 [1] Peng X, Luo S, Guan J, Xie Q, Peng J, Ma J. Pocket2Mol: Efficient Molecular Sampling Based on 3D Protein Pockets. ICML, 2022.
 [2] Luo S, Guan J, Ma J, Peng J. A 3D Generative Model for Structure-Based Drug Design. NeurIPS, 2021.
-[3] Guan J, Qian W W, Peng X, Ma J, Peng J. 3D Equivariant Diffusion for Target-Aware Molecule Generation and Affinity Prediction. ICLR, 2023.
+[3] Guan J, Qian W W, Peng X, Su Y, Peng J, Ma J. 3D Equivariant Diffusion for Target-Aware Molecule Generation and Affinity Prediction. ICLR, 2023.
 [4] Francoeur P G, Masuda T, Sunseri J, et al. Three-Dimensional Convolutional Neural Networks and a Cross-Docked Data Set for Structure-Based Drug Design. J Chem Inf Model, 2020, 60(9): 4200-4215.
 [5] Trott O, Olson A J. AutoDock Vina: Improving the Speed and Accuracy of Docking with a New Scoring Function. J Comput Chem, 2010, 31(2): 455-461.
 [6] Bickerton G R, Paolini G V, Besnard J, et al. Quantifying the Chemical Beauty of Drugs. Nat Chem, 2012, 4(2): 90-98.
