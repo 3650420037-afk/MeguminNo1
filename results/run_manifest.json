@@ -1,5 +1,5 @@
 {
- "run_id": "A2A_20260930_092707",
+ "run_id": "A2A_20261001_174937",
  "target": "A2A",
  "track": "赛道 3 · 离子通道/GPCR 小分子药物虚拟筛选 · 子任务 2",
  "stage": "predict",
@@ -15,23 +15,23 @@
  },
  "inputs": {
   "design_runs": [],
-  "library_dir": "outputs\\library_v10\\A2A\\library",
+  "library_dir": "results",
   "checkpoint": "models\\7-eonmol_ft_gpcr_v10.pt"
  },
  "result": {
   "library_molecules": 395,
   "listed_candidates": 300,
   "structure_files": 300,
-  "results_csv": "outputs\\library_v10\\A2A\\results\\results.csv",
+  "results_csv": "results\\results.csv",
   "ranking": "关键预测指标_对接分Vina 升序(越负结合越强), 缺失者置底; 同分按类药性综合分 = QED + (1 − SA/10)",
-  "enrichment": "top_candidates.csv(395 行, 补 1 列)",
+  "enrichment": "admet_screen.csv(395 行, 补 3 列); top_candidates.csv(395 行, 补 1 列)",
   "novelty_reference": "参考集 737 分子"
  },
  "timing_sec": {
   "design": 0.0,
   "library": 0.0,
-  "scoring": 1.6,
-  "total": 4.2
+  "scoring": 1.2,
+  "total": 2.9
  },
  "env": {
   "python": "3.10.20",
