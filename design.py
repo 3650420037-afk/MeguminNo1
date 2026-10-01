@@ -110,7 +110,7 @@ def main():
     ap = argparse.ArgumentParser(
         description="一键分子设计/生成 (Pocket2Mol + 口袋引导束搜索)",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    ap.add_argument("--target", help="靶点名, 取自 configs/targets.json (如 A2A/B2AR/D3/5HT2B/A1AR)")
+    ap.add_argument("--target", help="靶点名, 取自 configs/targets.json (如 A2A/D3/5HT2B/A1AR); 注意 B2AR 已于 2026-09-30 停用")
     ap.add_argument("--pdb", help="自定义受体 PDB 路径(与 --center 同时使用)")
     ap.add_argument("--center", type=lambda s: [float(x) for x in s.split(",")],
                     help="口袋中心 \"x,y,z\" (埃)")
@@ -156,7 +156,8 @@ def main():
                     help="S2 下限期使用的阈值（越小越强制继续生长）")
     ap.add_argument("--schedule-ceiling-ha", type=float, default=0.0,
                     help="**S3 硬尺寸上限**（默认 0=关闭）：分子长到该重原子数即强制判完成。"
-                         "依据 2026-09-29 诊断：strict 掉分主要来自 MW>500（v10term@5500 占 17%、官方 0%）")
+                         # 注意：argparse 会对 help 串做 % 格式化，裸 % 必须写成 %%（否则 --help 直接崩）
+                         "依据 2026-09-29 诊断：strict 掉分主要来自 MW>500（v10term@5500 占 17%%、官方 0%%）")
     ap.add_argument("--outdir", default=os.path.join(OUTPUTS, "design"), help="输出根目录")
     ap.add_argument("--device", default="cuda", help="cuda 或 cpu")
     args = ap.parse_args()
