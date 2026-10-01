@@ -1,0 +1,52 @@
+# ==========================================================================
+# 7-eonmol · conda 环境定义 (等价于 requirements.txt 的 conda 写法)
+#
+# 用途: 供习惯 conda 的评测方一条命令拉起环境。requirements.txt 是本项目
+#       实际实测并交付的锁定清单, 两者版本一致; 若只选一个, 请用 requirements.txt。
+#
+# 用法:
+#   conda env create -f environment.yml
+#   conda activate 7eonmol
+#   python -c "import torch,rdkit,torch_geometric;print(torch.__version__, torch.cuda.is_available())"
+#
+# 注意:
+#   * torch / torch-scatter / torch-cluster / torch-sparse 必须与本机 CUDA 匹配。
+#     本文件按实测环境固定为 CUDA 12.4 轮子; 其他 CUDA 版本请改 channels 里的
+#     pytorch-cuda, 或按 requirements.txt 末尾的说明用 pip 装对应轮子。
+#   * 纯 CPU 亦可运行(命令行加 --device cpu), 推理明显更慢。
+#   * 仓库根的 env_cuda113.yml 是**原版 Pocket2Mol 的 Linux 环境文件**
+#     (python 3.8 / torch 1.10.1+cu113), 与本项目实测环境不一致, 仅供溯源, 请勿使用。
+#   * 分子对接(可选)另需 tools/ 下的 AutoDock Vina 与 Open Babel, 不走 conda/pip。
+#
+# 实测环境: Python 3.10.20 · Windows 11 · RTX 4070 Laptop 8 GB · 驱动 610.62 · CUDA 12.4
+# ==========================================================================
+name: 7eonmol
+channels:
+  - conda-forge
+  - pytorch
+  - nvidia
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      # ---- 深度学习框架 ----
+      - torch==2.6.0
+      - torch-geometric==2.8.0
+      - torch-scatter==2.1.2
+      - torch-cluster==1.6.3
+      - torch-sparse==0.6.18
+      # ---- 化学信息学 ----
+      - rdkit==2026.3.5
+      - biopython==1.88
+      # ---- 数据与数值 ----
+      - numpy==2.2.6
+      - scipy==1.15.3
+      - lmdb==2.3.0
+      - networkx==3.4.2
+      # ---- 配置与工具 ----
+      - easydict==1.13
+      - PyYAML==6.0.3
+      - tqdm==4.70.0
+      - tensorboard==2.21.0
+      # ---- 报告/表格生成 ----
+      - python-pptx==1.0.2

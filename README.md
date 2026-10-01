@@ -76,6 +76,7 @@
 .
 ├── README.md              项目说明、环境配置、运行命令、输入输出与结果说明
 ├── requirements.txt       依赖库及锁定版本（环境/硬件说明见 README 第三节）
+├── environment.yml        conda 版环境定义（与 requirements.txt 等价，任选其一）
 ├── ModelCard.md           模型说明：适用范围、输入输出、已知局限、创新贡献
 ├── data/                  数据说明与获取方式（来源/许可/清洗/划分/泄漏防控）
 ├── src/                   核心源代码
@@ -235,7 +236,8 @@
 
 ### 3.1 完整依赖清单
 
-锁定版本见 [`requirements.txt`](./requirements.txt)（2026-09 实测环境）：
+锁定版本见 [`requirements.txt`](./requirements.txt)（2026-09 实测环境）；习惯 conda 的可用等价的
+[`environment.yml`](./environment.yml)（`conda env create -f environment.yml`），两者版本一致。
 
 | 类别 | 包与版本 |
 |---|---|
@@ -517,6 +519,9 @@ python src/scripts/build_target_registry.py
 **关于 `--center`**：`src/sample_for_pdb.py` 直接调用时，首个数值为负时**前导空格不能省**
 （负数参数解析约定），例如 `--center " -0.4,8.5,17.1"`；用 `design.py` / `predict.py`
 时由程序生成，无需手工处理。
+
+**部署验证记录**：从 GitHub 全新克隆后终端版与桌面版的实际运行命令、原始数字与**未验证项**，
+见 [`docs/交付与部署验证记录.md`](./docs/交付与部署验证记录.md)。
 
 ---
 
