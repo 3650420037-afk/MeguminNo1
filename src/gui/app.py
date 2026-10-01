@@ -59,13 +59,11 @@ PDB_DIR = TARGETS_DIR                                  # 迁移前的"靶点结�
 
 # 内置靶点: label 用于下拉框; code 用于在 PDB_DIR 中匹配 "<code>*.pdb" 文件;
 # center 为口袋中心 x,y,z。confirmed=False 的中心是按参考配体（链 A）质心
-# 估算的（估算方法已用 4EIY/2RH1 两个已知中心交叉验证，误差 < 0.1 A），
+# 估算的（估算方法已用 4EIY 等已知中心交叉验证，误差 < 0.1 A），
 # 界面上标注 "[中心待确认]"。
 BUILTIN_TARGETS = [
     {'label': 'A2A 腺苷受体 (4EIY)', 'code': '4EIY',
      'center': ('-0.4', '8.5', '17.1'), 'confirmed': True},
-    {'label': 'β2-AR 肾上腺素受体 (2RH1)', 'code': '2RH1',
-     'center': ('-29.5', '9.2', '6.9'), 'confirmed': True},
     {'label': 'D3 多巴胺受体 (3PBL) [中心待确认]', 'code': '3PBL',
      'center': ('0.1', '-14.8', '10.4'), 'confirmed': False},
     {'label': '5-HT2B 受体 (4IB4) [中心待确认]', 'code': '4IB4',
