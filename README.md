@@ -278,7 +278,9 @@ python -c "import torch,rdkit,torch_geometric;print(torch.__version__, torch.cud
 > `env_cuda113.yml` 是**原版 Pocket2Mol 的 Linux 环境文件**（python 3.8 / torch 1.10.1+cu113），
 > 与本项目实测环境不一致，仅供溯源，请勿用它复现环境。
 
-### 3.4 预期运行时间与资源| 任务 | 配置 | 实测耗时（RTX 4070 Laptop 8 GB） |
+### 3.4 预期运行时间与资源
+
+| 任务 | 配置 | 实测耗时（RTX 4070 Laptop 8 GB） |
 |---|---|---|
 | 快速自检生成 | 10 分子 / 束宽 50 / 20 步 | 2–4 分钟 |
 | 标准生成 | 50 分子 / 束宽 100 / 50 步 | ≈ 10 分钟 |
