@@ -37,6 +37,14 @@ import subprocess
 import sys
 import time
 
+# 控制台编码兜底(同 design.py): 重定向输出时中文 Windows 为 GBK / C locale 为 ASCII,
+# 遇到 − 等非本地字符会 UnicodeEncodeError。评测平台常以 > log.txt 方式运行本脚本, 必须兜住。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 from paths import (ROOT, CONFIGS, DATA, KNOWN_DRUGS, OUTPUTS, PRETRAINED,  # noqa: E402
                    DEFAULT_CKPT, RESULTS, ensure_dir, missing_hint)

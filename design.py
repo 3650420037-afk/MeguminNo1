@@ -30,6 +30,15 @@ import subprocess
 import sys
 import time
 
+# 控制台编码兜底: 中文 Windows 重定向到文件/管道时 stdout 默认 GBK, Linux C locale 下为 ASCII,
+# 打印帮助或日志里的 ⚠ / − 等字符会直接 UnicodeEncodeError 崩掉(python design.py --help > log.txt 即可复现)。
+# 交互式控制台本身已是 UTF-8, 这里改写不影响; errors=replace 保证任何字符都不会让程序失败。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 from paths import (ROOT, CONFIGS, OUTPUTS, PRETRAINED, DEFAULT_CKPT, TARGETS,  # noqa: E402
                    ensure_dir, missing_hint, recommended_frontier_threshold)

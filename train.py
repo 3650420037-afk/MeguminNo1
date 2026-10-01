@@ -3,6 +3,14 @@
 import os
 import sys
 
+# 控制台编码兜底(同 design.py / predict.py): 重定向输出时中文 Windows 为 GBK / C locale 为 ASCII,
+# 训练日志里的 ⚠ 等字符会让 UnicodeEncodeError 直接中断训练。
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # 核心代码位于 src/ 下(models / utils / scripts), 需先让 src/ 可导入
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "src"))
 from paths import ROOT, SRC, CONFIGS, LOGS, ensure_dir  # noqa: E402
